@@ -706,7 +706,7 @@ class GANCost(Cost):
         self.cost_type = cost_type
         self.func = func
         err_str = "Illegal GAN cost type, can only be: gen or dis"
-        assert self.cost_type in ['dis', 'gen']
+        assert self.cost_type in ['dis', 'gen'], err_str
         err_str = "Unsupported GAN cost function, supported: original, modified, wasserstein"
         assert self.func in ['original', 'modified', 'wasserstein'], err_str
         self.one_buf = self.be.iobuf(1)
@@ -739,7 +739,8 @@ class GANCost(Cost):
             cost_gen = y_noise
 
         if cost_type == 'dis':
-            return self.be.mean(cost_dis_data + cost_dis_noise, axis=0)
+            trackvalue = self.be.mean(cost_dis_data + cost_dis_noise, axis=0) # debugging
+            return trackvalue
         elif cost_type == 'dis_data':
             return self.be.mean(cost_dis_data, axis=0)
         elif cost_type == 'dis_noise':

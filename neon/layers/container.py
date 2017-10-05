@@ -26,6 +26,7 @@ from neon.transforms import Softmax
 from neon.util.persist import load_class
 from functools import reduce
 from funcsigs import signature
+from neon.backends.backend import OpTreeNode
 
 
 def flatten(item):
@@ -392,9 +393,15 @@ class Sequential(LayerContainer):
             if altered_tensor:
                 l.revert_list.append(altered_tensor)
             if type(l.prev_layer) is BranchNode or l is self._layers[0]:
-                error = l.bprop(error, alpha, beta)
+                if isinstance(error, OpTreeNode):
+                    trackdown = error.astensor()
+                    error = l.bprop(trackdown, alpha, beta)  # error not converted into mkl tensor here.
+                else:
+                    error = l.bprop(error, alpha, beta)
             else:
-                error = l.bprop(error)
+                if isinstance(error, OpTreeNode):
+                    error = error.astensor()
+                error = l.bprop(error) # error now mkl tensor. in here OpTreeNode execute called????
 
             for tensor in l.revert_list:
                 self.be.revert_tensor(tensor)
@@ -516,7 +523,18 @@ class Tree(LayerContainer):
         self.out_shape = [l.out_shape for l in self.layers]
         return self
 
-    def allocate(self, shared_outputs=None):
+    # def allocate(self, shared_outputs=None):
+    #     """
+    #     Allocate output buffer to store activations from fprop.
+    #
+    #     Arguments:
+    #         shared_outputs (Tensor, optional): pre-allocated tensor for activations to be
+    #                                            computed into
+    #     """
+    #     for l in self.layers:
+    #         l.allocate()
+    #     self.outputs = [l.outputs for l in self.layers]
+    def allocate(self, shared_outputs=None, accumulate_updates=False):
         """
         Allocate output buffer to store activations from fprop.
 
@@ -524,9 +542,18 @@ class Tree(LayerContainer):
             shared_outputs (Tensor, optional): pre-allocated tensor for activations to be
                                                computed into
         """
+        # get the layers that own their outputs
+        self.accumulate_updates = accumulate_updates
+        alloc_layers = [l for l in self.layers if l.owns_output]
+        if 'accumulate_updates' in signature(alloc_layers[-1].allocate).parameters:
+            alloc_layers[-1].allocate(shared_outputs, accumulate_updates=accumulate_updates)
+        else:
+            alloc_layers[-1].allocate(shared_outputs)
         for l in self.layers:
-            l.allocate()
-        self.outputs = [l.outputs for l in self.layers]
+            if 'accumulate_updates' in signature(l.allocate).parameters:
+                l.allocate(accumulate_updates=accumulate_updates)
+            else:
+                l.allocate()
 
     def allocate_deltas(self, global_deltas=None):
         for l in reversed(self.layers):
@@ -556,8 +583,13 @@ class Tree(LayerContainer):
         Returns:
             Tensor: deltas to propagate to the adjacent lower layer
         """
-        for l, e, a, b in reversed(list(zip(self.layers, error, self.alphas, self.betas))):
-            l.bprop(e, alpha=a, beta=b)
+        temp_list = list(zip(self.layers, error, self.alphas, self.betas))
+        bunch = reversed(temp_list)
+        for l, e, a, b in bunch:
+        #for l, e, a, b in reversed(list(zip(self.layers, (error,), self.alphas, self.betas))):
+            delta = l.bprop(e, alpha=a, beta=b)
+        return delta
+
 
     def get_terminal(self):
         """

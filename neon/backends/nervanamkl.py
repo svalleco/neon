@@ -27,6 +27,7 @@ from ctypes import c_longlong, c_float, c_double, c_int
 import numpy as np
 from neon.backends import math_cpu
 import os
+from neon.backends.backend import Tensor, Backend, OpTreeNode, OpCollection
 
 _none_slice = slice(None, None, None)
 
@@ -206,15 +207,9 @@ class NervanaMKL(NervanaCPU):
         return a
 
     def convert_data(self, tensor, layer_mkl):
-        if not layer_mkl and tensor is not None:
-            if type(tensor) == MKLTensor:
-                self.convert(tensor)
-                tensor.clean_mkl()
-            elif type(tensor) is list:
-                for i in tensor:
-                    self.convert_data(i, layer_mkl)
-            else:
-                assert False, 'input must be tensors or list of tensors'
+        if not layer_mkl and tensor is not None and type(tensor) == MKLTensor:
+            self.convert(tensor)
+            tensor.clean_mkl()
 
     def clean_data(self, tensor, layer_mkl):
         if layer_mkl and tensor is not None and type(tensor) == MKLTensor:
@@ -545,6 +540,15 @@ class NervanaMKL(NervanaCPU):
         deltas.shape5D = layer.shape5D
         if deltas.primitive[3] == 0:
             deltas[:] = error
+
+    def fprop_softmax(self, x, axis):
+        self.convert(x)
+        x.clean_mkl()
+        inp = c_longlong(x._tensor.ctypes.data)
+        N = x.shape[1]
+        L = x.shape[0]
+        self.mklEngine.SoftmaxCHWN(inp, N, L)
+        return x
 
     def fprop_transform(self, nglayer, transform, inputs, outputs, relu=False):
         if relu:

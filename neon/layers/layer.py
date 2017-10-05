@@ -1284,7 +1284,7 @@ class Linear(ParameterLayer):
         Returns:
             Tensor: deltas to propagate to the adjacent lower layer
         """
-        if self.deltas:
+        if self.deltas: # here error is OpTreeNode in myGAN modeling
             self.be.compound_dot(A=self.W.T, B=error, C=self.deltas, alpha=alpha, beta=beta)
         self.be.compound_dot(A=error, B=self.inputs.T, C=self.dW)
         return self.deltas
@@ -1794,8 +1794,7 @@ class Conv(CompoundLayer):
                  name=None):
         super(Conv, self).__init__(bias=bias, batch_norm=batch_norm,
                                    activation=activation, name=name)
-        # temp fall back to old conv and bias for bug of weights save/load
-        if False and bias and NervanaObject.be.is_mkl():
+        if bias and NervanaObject.be.is_mkl():
             self.append(Convolution_bias(fshape=fshape, strides=strides, padding=padding,
                                          dilation=dilation, init=init, bsum=batch_norm, bias=bias,
                                          name=name))
@@ -1808,8 +1807,7 @@ class Conv(CompoundLayer):
     def add_postfilter_layers(self):
         self.init_base_name()
         # mklbackend will do conv+bias
-        # fall back
-        if self.bias is not None:
+        if self.bias is not None and not NervanaObject.be.is_mkl():
             name = self.base_name + '_bias'
             self.append(Bias(init=self.bias, name=name))
         if self.batch_norm:

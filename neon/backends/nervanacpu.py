@@ -645,6 +645,19 @@ class NervanaCPU(Backend):
         """
         ary[:] = np.random.standard_normal(ary.shape) * stdv + mean
 
+    def rand(self, out=None):
+        """
+        Generate random number uniformly distributed between 0 and 1.
+
+        Arguments:
+            out (Tensor, optional): where the result will be stored. If out is
+                                    None, only the op-tree will be returned.
+
+        Returns:
+            OpTreeNode: the resulting op-tree
+        """
+        return OpTreeNode.build("rand", None, None, out=out)
+
     def execute(self, optree, numpy_call_dict=numpy_call_dict_cpu):
         """
         Execute the optree. Break optree into sub-optrees if necessary.
