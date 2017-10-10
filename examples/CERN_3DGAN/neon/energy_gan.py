@@ -20,7 +20,6 @@ from neon.backends.backend import Block
 from energy_dataset import temp_3Ddata, EnergyData
 import numpy as np
 from sklearn.model_selection import train_test_split
-# import matplotlib.pyplot as plt
 import h5py
 # new definitions
 
@@ -310,7 +309,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.1, test_s
 print(X_train.shape, 'X train shape')
 print(y_train.shape, 'y train shape')
 
-gen_backend(backend='mkl', batch_size=10)
+gen_backend(backend='gpu', batch_size=64)
 
 #X_train.reshape((X_train.shape[0], 25 * 25 * 25))
 
@@ -423,8 +422,8 @@ optimizer = GradientDescentMomentum(learning_rate=1e-3, momentum_coef = 0.9)
 cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
                         GeneralizedCost(costfunc=MeanSquared()),
                         GeneralizedCost(costfunc=MeanSquared())])
-nb_epochs = 15
-latent_size = 200
+nb_epochs = 2
+latent_size = 256
 # initialize model
 noise_dim = (latent_size)
 gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=1, wgan_param_clamp=0.9)
