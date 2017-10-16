@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from neon.callbacks.callbacks import Callbacks, GANCostCallback, TrainMulticostCallback
-#from neon.callbacks.plotting_callbacks import GANPlotCallback
+from neon.callbacks.plotting_callbacks import GANPlotCallback
 from neon.initializers import Gaussian, Constant
 from neon.layers import GeneralizedGANCost, Affine, Linear, Sequential, Conv, Deconv, Dropout, Pooling, BatchNorm, BranchNode, GeneralizedCost
 from neon.layers.layer import Linear, Reshape
@@ -20,6 +20,8 @@ from neon.backends.backend import Block
 from energy_dataset import temp_3Ddata, EnergyData
 import numpy as np
 from sklearn.model_selection import train_test_split
+from neon.util.persist import load_obj, save_obj
+import matplotlib.pyplot as plt
 import h5py
 # new definitions
 
@@ -150,6 +152,8 @@ class myGAN(Model):
         prev_input = dataset
         prev_input = self.layers.generator.configure(self.noise_dim)
         prev_input = self.layers.discriminator.configure(dataset)
+        # prev_input = self.layers.configure(self.noise_dim)
+
 
         if cost is not None:
             cost.initialize(self.layers)
@@ -293,18 +297,61 @@ class myGAN(Model):
         """
         return self.layers.generator.bprop(delta)
 
+    def save_params(self, param_path, keep_states=True):
+        """
+        Serializes and saves model parameters to the path specified.
+
+        Arguments:
+            param_path (str): File to write serialized parameter dict to.
+            keep_states (bool): Whether to save optimizer states too.
+                                Defaults to True.
+        """
+        self.serialize(keep_states=keep_states, fn=param_path)
+
+    # serialize tells how to write out the parameters we've learned so
+    # far and associate them with layers. it can ignore layers with no
+    # learned parameters. the model stores states to pass to the
+    # optimizers.  if we're saving the model out for inference, we
+    # don't need to remember states.
+    def serialize(self, fn=None, keep_states=True):
+        """
+        Creates a dictionary storing the layer parameters and epochs complete.
+
+        Arguments:
+            fn (str): file to save pkl formatted model dictionary
+            keep_states (bool): Whether to save optimizer states.
+
+        Returns:
+            dict: Model data including layer parameters and epochs complete.
+        """
+
+        # get the model dict with the weights
+        pdict = self.get_description(get_weights=True, keep_states=keep_states)
+        pdict['epoch_index'] = self.epoch_index + 1
+        if self.initialized:
+            if not hasattr(self.layers, 'decoder'):
+                pdict['train_input_shape'] = self.layers.in_shape
+            else:
+                # serialize shapes both for encoder and decoder
+                pdict['train_input_shape'] = (self.layers.encoder.in_shape +
+                                              self.layers.decoder.in_shape)
+        if fn is not None:
+            save_obj(pdict, fn)
+            return
+        return pdict
+
 
 # load up the data set
 X, y = temp_3Ddata()
 X[X < 1e-6] = 0
-#mean = np.mean(X, axis=0, keepdims=True)
-#max_elem = np.max(np.abs(X))
-#print(np.max(np.abs(X)),'max abs element')
-#print(np.min(X),'min element')
-#X = (X- mean)/max_elem
-#print(X.shape, 'X shape')
-#print(np.max(X),'max element after normalisation')
-#print(np.min(X),'min element after normalisation')
+mean = np.mean(X, axis=0, keepdims=True)
+max_elem = np.max(np.abs(X))
+print(np.max(np.abs(X)),'max abs element')
+print(np.min(X),'min element')
+X = (X- mean)/max_elem
+print(X.shape, 'X shape')
+print(np.max(X),'max element after normalisation')
+print(np.min(X),'min element after normalisation')
 X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.1, test_size=0.1, random_state=42)
 print(X_train.shape, 'X train shape')
 print(y_train.shape, 'y train shape')
@@ -412,13 +459,9 @@ layers = myGenerativeAdversarial(generator=G_layers, discriminator=D_layers)
 print 'layers defined'
 print layers
 # setup optimizer
-# optimizer = RMSProp(learning_rate=1e-4, decay_rate=0.9, epsilon=1e-8)
 optimizer = GradientDescentMomentum(learning_rate=1e-3, momentum_coef = 0.9)
-#optimizer = Adam(learning_rate=1e-3)
 
 # setup cost function as Binary CrossEntropy
-#cost = GeneralizedGANCost(costfunc=GANCost(func="wasserstein"))
-#cost = GeneralizedGANCost(costfunc=Multicost[GANCost(func="wasserstein"), MeanSquared, MeanSquared])
 cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
                         GeneralizedCost(costfunc=MeanSquared()),
                         GeneralizedCost(costfunc=MeanSquared())])
@@ -429,8 +472,13 @@ noise_dim = (latent_size)
 gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=1, wgan_param_clamp=0.9)
 # configure callbacks
 callbacks = Callbacks(gan, eval_set=valid_set)
-#callbacks.add_callback(GANCostCallback())
 callbacks.add_callback(TrainMulticostCallback())
+# fdir = ensure_dirs_exist(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results/'))
+# fname = os.path.splitext(os.path.basename(__file__))[0] +\
+#     '_[' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + ']'
+# im_args = dict(filename=os.path.join(fdir, fname), hw=32,
+#                num_samples=64, nchan=1, sym_range=True)
+# callbacks.add_callback(GANPlotCallback(**im_args))
 #callbacks.add_save_best_state_callback("./best_state.pkl")
 
 print 'starting training'
@@ -438,23 +486,23 @@ print 'starting training'
 gan.fit(train_set, num_epochs=nb_epochs, optimizer=optimizer,
         cost=cost, callbacks=callbacks)
 
-# gan.save_params('our_gan.prm')
+#gan.save_params('our_gan.prm')
 
-#x_new = np.random.randn(100, latent_size) 
-#inference_set = HDF5Iterator(x_new, None, nclass=2, lshape=(latent_size))
-#my_generator = Model(gan.layers.generator)
-#my_generator.save_params('our_gen.prm')
-#my_discriminator = Model(gan.layers.discriminator)
-#my_discriminator.save_params('our_disc.prm')
-#test = my_generator.get_outputs(inference_set)
-#test = np.float32(test*max_elem + mean)
-#test =  test.reshape((100, 25, 25, 25))
+x_new = np.random.randn(100, latent_size)
+inference_set = train_set #HDF5Iterator(x_new, None, nclass=2, lshape=(latent_size))
+my_generator = Model(gan.layers.generator)
+my_generator.save_params('our_gen.prm')
+my_discriminator = Model(gan.layers.discriminator)
+my_discriminator.save_params('our_disc.prm')
+test = my_generator.get_outputs(inference_set)
+test = np.float32(test*max_elem + mean)
+test =  test.reshape((1000, 25, 25, 25))
 
-#print(test.shape, 'generator output')
+print(test.shape, 'generator output')
 
-#plt.plot(test[0, :, 12, :])
-# plt.savefigure('output_img.png')
+plt.plot(test[0, :, 12, :])
+plt.savefig('output_img.png')
 
-#h5f = h5py.File('output_data.h5', 'w')
-#h5f.create_dataset('dataset_1', data=test)
+h5f = h5py.File('output_data.h5', 'w')
+h5f.create_dataset('dataset_1', data=test)
 

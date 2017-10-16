@@ -297,6 +297,8 @@ class Model(NervanaObject):
         Ypred = None
         for idx, input_data in enumerate(dataset):
             x = self.fprop(input_data[0], inference=True)
+            if isinstance(x, list):
+                x = x[0]
             if Ypred is None:
                 (dim0, dim1) = x.shape
                 Ypred = np.empty((n * dim1, dim0), dtype=x.dtype)
