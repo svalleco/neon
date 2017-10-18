@@ -134,7 +134,7 @@ class myGAN(Model):
         else:
             z[:] = 2 * self.be.rand() - 1.
         #z[:] = z[:]*(self.be.rand()*(maxE -minE)+minE)
-        z[:] = z[:]*(np.random.rand()*(maxE -minE)+minE)
+        z[:] = z[:]*(np.random.rand()*(maxE - minE) + minE)
 
     def initialize(self, dataset, cost=None):
         """
@@ -340,6 +340,40 @@ class myGAN(Model):
             return
         return pdict
 
+    def get_generator_outputs(self, dataset):
+        """
+        Get the activation outputs of the final model layer for the dataset
+
+        Arguments:
+            dataset (NervanaDataIterator): Dataset iterator to perform fit on
+
+        Returns:
+            Host numpy array: the output of the final layer for the entire Dataset
+        """
+        self.initialize(dataset)
+        dataset.reset()  # Move "pointer" back to beginning of dataset
+        n = dataset.nbatches
+        x = self.layers.layers[-1].outputs
+        assert not isinstance(x, list), "Can not get_outputs with Branch terminal"
+        Ypred = None
+        for idx, input_data in enumerate(dataset):
+            x = self.fprop_gen(input_data[0], inference=True)
+            if isinstance(x, list):
+                x = x[0]
+            if Ypred is None:
+                (dim0, dim1) = x.shape
+                Ypred = np.empty((n * dim1, dim0), dtype=x.dtype)
+                nsteps = dim1 // self.be.bsz
+            cur_batch = slice(idx * dim1, (idx + 1) * dim1)
+            Ypred[cur_batch] = x.get().T
+
+        # Handle the recurrent case.
+        if nsteps != 1:
+            b, s = (self.be.bsz, nsteps)
+            Ypred = Ypred.reshape((n, s, b, -1)).transpose(0, 2, 1, 3).copy().reshape(n * b, s, -1)
+
+        return Ypred[:dataset.ndata]
+
 
 # load up the data set
 X, y = temp_3Ddata()
@@ -465,7 +499,7 @@ optimizer = GradientDescentMomentum(learning_rate=1e-3, momentum_coef = 0.9)
 cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
                         GeneralizedCost(costfunc=MeanSquared()),
                         GeneralizedCost(costfunc=MeanSquared())])
-nb_epochs = 2
+nb_epochs = 1
 latent_size = 256
 # initialize model
 noise_dim = (latent_size)
@@ -488,15 +522,18 @@ gan.fit(train_set, num_epochs=nb_epochs, optimizer=optimizer,
 
 #gan.save_params('our_gan.prm')
 
-x_new = np.random.randn(100, latent_size)
 inference_set = train_set #HDF5Iterator(x_new, None, nclass=2, lshape=(latent_size))
+
+x_new = np.random.randn(100, latent_size)
+inference_set = ArrayIterator(X=x_new, make_onehot=False)
 my_generator = Model(gan.layers.generator)
 my_generator.save_params('our_gen.prm')
 my_discriminator = Model(gan.layers.discriminator)
 my_discriminator.save_params('our_disc.prm')
+#gan.fill_noise(inference_set)
 test = my_generator.get_outputs(inference_set)
 test = np.float32(test*max_elem + mean)
-test =  test.reshape((1000, 25, 25, 25))
+test = test.reshape((100, 25, 25, 25))
 
 print(test.shape, 'generator output')
 
