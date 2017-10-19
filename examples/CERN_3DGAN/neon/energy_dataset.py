@@ -3,32 +3,24 @@ import h5py
 
 from neon.data import NervanaDataIterator
 
-def temp_3Ddata():
+def temp_3Ddata(fileName):
+   #xtr = np.random.rand(10000, 25, 25, 25)
+   #labels = np.ones((xtr.shape[0], 2))
 
-   #f = h5py.File("/Users/svalleco/GAN/data/small_test.h5","r")
-   #f = h5py.File("/Users/svalleco/GAN/data/Ele_v1_1_2.h5","r")
-   #data = f.get('ECAL')
-   #dtag =f.get('TAG')
-   #xtr = np.array(data)
-   xtr = np.random.rand(10000, 25, 25, 25)
-   print (xtr.shape)
-   #labels = np.ones(xtr.shape[0])
-   #dtag =f.get('target')
-   #temp = np.array(dtag[:,1])
-   #print (temp.shape)
-   aa=np.reshape(xtr, (xtr.shape[0], 25*25*25))
-   print (aa.shape)
+   f = h5py.File(fileName,"r")
+   data = f.get('ECAL')
+   dtag =f.get('target')
+   xtr = np.array(data)
+   aa = np.reshape(xtr, (xtr.shape[0], 25*25*25)) 
    sumE = np.sum(aa, axis=(1)) 
-   #labels=np.stack((np.array(dtag[:,1]),sumE),axis=1)
-   labels = np.ones((xtr.shape[0], 2))
-   print labels.shape
+   temp = np.array(dtag)/100.
+   labels=np.stack((temp[:,1],sumE),axis=1)
    
    return aa.astype(np.float32), labels.astype(np.float32)
-   #return xtr.reshape((xtr.shape[0], 25 * 25 * 25)).astype(np.float32), labels.astype(np.float32)
 
-def get_output():
-   f = h5py.File("/Users/svalleco/GAN/data/output_data.h5","r")
-   data = f.get("dataset_1")
+def get_output(outputFileName):
+   f = h5py.File(outputFileName,"r")
+   data = f.get("ECAL")
    x = np.array(data)
    return x.astype(np.float32)
 
