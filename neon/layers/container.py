@@ -356,7 +356,8 @@ class Sequential(LayerContainer):
             l.revert_list = [altered_tensor] if altered_tensor else []
 
             # try to convert to mkl
-            l.be.convert_data(x, l.get_is_mklop())
+            test_mkl = l.get_is_mklop()
+            l.be.convert_data(x, test_mkl)
 
             if l is self.layers[-1] and beta != 0:
                 x = l.fprop(x, inference=inference, beta=beta)

@@ -134,7 +134,11 @@ class myGAN(Model):
         else:
             z[:] = 2 * self.be.rand() - 1.
         #z[:] = z[:]*(self.be.rand()*(maxE -minE)+minE)
-        z[:] = z[:]*(np.random.rand()*(maxE - minE) + minE)
+        myEnergies = np.transpose(np.random.rand(z.shape[1]) * (maxE - minE) + minE)
+        myEnergies = self.be.array(myEnergies)
+        for i in range (z.shape[1]):
+            z[:, i] = z[:, i] * myEnergies[i]
+        return myEnergies.T
 
     def initialize(self, dataset, cost=None):
         """
@@ -207,14 +211,22 @@ class myGAN(Model):
                                           self.wgan_param_clamp)
 
             # train discriminator on noise
-            self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
+            myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
             #z = self.z0
             Gz = self.fprop_gen(z) # Gz is a list qwith 1 element, being the generator defined as tree
             y_noise_list = self.fprop_dis(Gz[0]) # this is due to the generator defined as tree
             y_noise = y_noise_list[0] # getting the Real/Fake
+            y_noise_Ep = y_noise_list[1]
+            y_noise_SUMEcal = y_noise_list[2]
+
             y_temp[:] = y_noise
+
             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
-            delta_nnn = self.bprop_dis([delta_noise])
+            t = myEnergies[0, :]
+            delta_noise_Ep = self.cost.costs[1].costfunc.bprop(t , y_noise_Ep)
+            delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(.5 * t, y_noise_SUMEcal)
+            delta_nnn = self.bprop_dis([delta_noise, delta_noise_Ep, delta_noise_SUMEcal])
+            # delta_nnn = self.bprop_dis([delta_noise])
             self.layers.discriminator.set_acc_on(True)
 
             # train discriminator on data: in this case the additional lines will be taken into account
@@ -223,11 +235,11 @@ class myGAN(Model):
             # the output lines are meaningful
             y_data_Ep = y_data_list[1]
             y_data_SUMEcal = y_data_list[2]
-            #pippo = self.cost.cost
             delta_data = self.cost.costs[0].costfunc.bprop_data(y_data)
-            delta_noise_Ep = self.cost.costs[1].costfunc.bprop(labels[0, :], y_data_Ep)
-            delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(labels[1, :], y_data_SUMEcal)
-            delta_ddd = self.bprop_dis([delta_data, delta_noise_Ep, delta_noise_SUMEcal])
+            l = labels[0, :]
+            delta_data_Ep = self.cost.costs[1].costfunc.bprop(l, y_data_Ep)
+            delta_data_SUMEcal = self.cost.costs[2].costfunc.bprop(labels[1, :], y_data_SUMEcal)
+            delta_ddd = self.bprop_dis([delta_data, delta_data_Ep, delta_data_SUMEcal])
             self.optimizer.optimize(self.layers.discriminator.layers_to_optimize, epoch=epoch)
             self.layers.discriminator.set_acc_on(False)
 

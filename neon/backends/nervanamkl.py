@@ -210,6 +210,10 @@ class NervanaMKL(NervanaCPU):
         if not layer_mkl and tensor is not None and type(tensor) == MKLTensor:
             self.convert(tensor)
             tensor.clean_mkl()
+        # else:
+        #     print("MKL Tensor: {}".format(type(tensor)))
+        #     print("MKL Layer: {}".format(layer_mkl))
+        #     #assert False, 'input must be tensors or list of tensors'
 
     def clean_data(self, tensor, layer_mkl):
         if layer_mkl and tensor is not None and type(tensor) == MKLTensor:
