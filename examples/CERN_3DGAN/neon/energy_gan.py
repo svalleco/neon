@@ -134,7 +134,7 @@ class myGAN(Model):
         else:
             z[:] = 2 * self.be.rand() - 1.
         #z[:] = z[:]*(self.be.rand()*(maxE -minE)+minE)
-        myEnergies = np.transpose(np.random.rand(z.shape[1]) * (maxE - minE) + minE)
+        myEnergies = np.random.rand(z.shape[1]) * (maxE - minE) + minE
         myEnergies = self.be.array(myEnergies)
         for i in range (z.shape[1]):
             z[:, i] = z[:, i] * myEnergies[i]
@@ -236,8 +236,7 @@ class myGAN(Model):
             y_data_Ep = y_data_list[1]
             y_data_SUMEcal = y_data_list[2]
             delta_data = self.cost.costs[0].costfunc.bprop_data(y_data)
-            l = labels[0, :]
-            delta_data_Ep = self.cost.costs[1].costfunc.bprop(l, y_data_Ep)
+            delta_data_Ep = self.cost.costs[1].costfunc.bprop(labels[0, :], y_data_Ep)
             delta_data_SUMEcal = self.cost.costs[2].costfunc.bprop(labels[1, :], y_data_SUMEcal)
             delta_ddd = self.bprop_dis([delta_data, delta_data_Ep, delta_data_SUMEcal])
             self.optimizer.optimize(self.layers.discriminator.layers_to_optimize, epoch=epoch)
@@ -246,9 +245,6 @@ class myGAN(Model):
             # keep GAN cost values for the current minibatch
             # abuses get_cost(y,t) using y_noise as the "target"
             self.cost_dis[:] = self.cost.costs[0].get_cost(y_data, y_temp, cost_type='dis')
-
-            #console feedback
-            #print(" \n minibatch index {}".format(mb_idx))
 
             # train generator
             if self.current_batch == self.last_gen_batch + self.get_k(self.gen_iter):
