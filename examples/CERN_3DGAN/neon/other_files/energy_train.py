@@ -18,7 +18,7 @@ from neon.backends import gen_backend
 from neon.backends.backend import Block
 from neon.util.persist import load_obj, save_obj
 
-from energy_dataset import temp_3Ddata, EnergyData
+from examples.CERN_3DGAN.neon.energy_dataset import temp_3Ddata, EnergyData
 from gan_defs import myGenerativeAdversarial, myGAN
 from gan_layers import G_layers, D_layers
 

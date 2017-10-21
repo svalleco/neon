@@ -18,7 +18,7 @@ from neon.optimizers.optimizer import get_param_list
 from gen_data_norm import gen_rhs
 from neon.backends import gen_backend
 from neon.backends.backend import Block
-from energy_dataset import temp_3Ddata, EnergyData
+from examples.CERN_3DGAN.neon.energy_dataset import temp_3Ddata, EnergyData
 import numpy as np
 from sklearn.model_selection import train_test_split
 from neon.util.persist import load_obj, save_obj
@@ -27,7 +27,7 @@ import h5py
 # new definitions
 from gan_defs import myGenerativeAdversarial, myGAN
 from gan_layers import G_layers, D_layers
-from energy_dataset import temp_3Ddata, EnergyData
+from examples.CERN_3DGAN.neon.energy_dataset import temp_3Ddata, EnergyData
 import logging
 main_logger = logging.getLogger('neon')
 main_logger.setLevel(10)
