@@ -9,12 +9,16 @@ def temp_3Ddata(fileName):
 
    f = h5py.File(fileName,"r")
    data = f.get('ECAL')
-   dtag =f.get('target')
+   dtag =f.get('TAG')
+   #mykeys = f.keys()
    xtr = np.array(data)
    aa = np.reshape(xtr, (xtr.shape[0], 25*25*25)) 
-   sumE = np.sum(aa, axis=(1)) 
-   temp = np.array(dtag)/100.
-   labels=np.stack((temp[:,1],sumE),axis=1)
+   sumE = np.sum(aa, axis=(1))
+   Epart = np.array(dtag) #physicall nonsense, just to run the code. Clarify with Sofia how to deal with the dataset
+   labels = np.stack((Epart, sumE), axis=1)
+
+   #temp = np.array(aa) / 100
+   #labels = np.stack((temp[:,1],sumE),axis=1)
    
    return aa.astype(np.float32), labels.astype(np.float32)
 
@@ -43,7 +47,7 @@ class EnergyData(NervanaDataIterator):
 
     def __iter__(self):
         # 3. loop through minibatches in the dataset
-        for index in range(self.start, self.ndata, self.be.bsz):
+        for index in range(self.start, self.ndata - self.be.bsz, self.be.bsz):
             # 3a. grab the right slice from the numpy arrays
             inputs = self.X[index:(index+self.be.bsz),:]
             targets = self.Y[index:(index+self.be.bsz),:]

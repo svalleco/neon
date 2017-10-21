@@ -23,6 +23,7 @@ from sklearn.model_selection import train_test_split
 from neon.util.persist import load_obj, save_obj
 import matplotlib.pyplot as plt
 import h5py
+from neon.data import ArrayIterator
 # new definitions
 
 import logging
@@ -61,9 +62,9 @@ class myGenerativeAdversarial(GenerativeAdversarial): # LayerContainer):
         ss += '\n' + '  ' * level + 'Discriminator:\n'
         ss += padstr.join([l.nested_str(level + 1) for l in self.discriminator.layers])
         return ss
+
     def get_terminal(self):
         return self.generator.get_terminal() + self.discriminator.get_terminal()
-
 
 
 class myGAN(Model):
@@ -158,7 +159,6 @@ class myGAN(Model):
         prev_input = self.layers.discriminator.configure(dataset)
         # prev_input = self.layers.configure(self.noise_dim)
 
-
         if cost is not None:
             cost.initialize(self.layers)
             self.cost = cost
@@ -168,7 +168,6 @@ class myGAN(Model):
         self.layers.discriminator.allocate(accumulate_updates=True)
         self.layers.allocate_deltas(None)
         self.initialized = True
-
         self.zbuf = self.be.iobuf(self.noise_dim)
         self.ybuf = self.be.iobuf((1,))
         self.z0 = self.be.iobuf(self.noise_dim)  # a fixed noise buffer for generating images
@@ -210,46 +209,63 @@ class myGAN(Model):
                 self.clip_param_in_layers(self.layers.discriminator.layers_to_optimize,
                                           self.wgan_param_clamp)
 
-            # train discriminator on noise
+            # TRAIN DISCRIMINATOR ON NOISE
             myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
-            #z = self.z0
-            Gz = self.fprop_gen(z) # Gz is a list qwith 1 element, being the generator defined as tree
+            Gz = self.fprop_gen(z) # Gz is a list with 1 element of batchsize size, being the generator defined as tree
             y_noise_list = self.fprop_dis(Gz[0]) # this is due to the generator defined as tree
-            y_noise = y_noise_list[0] # getting the Real/Fake
-            y_noise_Ep = y_noise_list[1]
-            y_noise_SUMEcal = y_noise_list[2]
 
+            # getting separate discriminator outputs
+            y_noise = y_noise_list[0] # getting the Real/Fake
+            y_noise_Ep = y_noise_list[1] # getting Particle Energy
+            y_noise_SUMEcal = y_noise_list[2] # getting Total Energy on Cal
+
+            # buffering fake/real discriminator output
             y_temp[:] = y_noise
 
+            # computing derivatives of cost function wrt discriminator outputs, on all output lines
             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
             t = myEnergies[0, :]
-            delta_noise_Ep = self.cost.costs[1].costfunc.bprop(t , y_noise_Ep)
+            delta_noise_Ep = self.cost.costs[1].costfunc.bprop(t, y_noise_Ep)
             delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(.5 * t, y_noise_SUMEcal)
+
+            # computing gradient contributions from all three output lines, for discriminator weights
             delta_nnn = self.bprop_dis([delta_noise, delta_noise_Ep, delta_noise_SUMEcal])
-            # delta_nnn = self.bprop_dis([delta_noise])
+            # delta_nnn = self.bprop_dis([delta_noise]) # for backprop of fake/real line only
+
+            # set flag for accumulation of gradients so far computed as addition of the gradients on
+            # data training is next
             self.layers.discriminator.set_acc_on(True)
 
-            # train discriminator on data: in this case the additional lines will be taken into account
+            # TRAIN DISCRIMINATOR ON DATA
             y_data_list = self.fprop_dis(x)
-            y_data = y_data_list[0] # this is due to the generator defined as tree, but this time all
-            # the output lines are meaningful
-            y_data_Ep = y_data_list[1]
-            y_data_SUMEcal = y_data_list[2]
+
+            # getting separate discriminator outputs
+            y_data = y_data_list[0] # this is due to the generator defined as tree
+            y_data_Ep = y_data_list[1] # getting Particle Energy
+            y_data_SUMEcal = y_data_list[2] # getting Total Energy on Cal
+
+            # computing derivatives of cost function wrt discriminator outputs, on all output lines
             delta_data = self.cost.costs[0].costfunc.bprop_data(y_data)
             delta_data_Ep = self.cost.costs[1].costfunc.bprop(labels[0, :], y_data_Ep)
             delta_data_SUMEcal = self.cost.costs[2].costfunc.bprop(labels[1, :], y_data_SUMEcal)
+
+            # computing gradient contributions from all three output lines, for discriminator weights
             delta_ddd = self.bprop_dis([delta_data, delta_data_Ep, delta_data_SUMEcal])
+
+            # using gradients so calculated to tweak the discriminator weights
             self.optimizer.optimize(self.layers.discriminator.layers_to_optimize, epoch=epoch)
+
+            # gradient accumulation flag off
             self.layers.discriminator.set_acc_on(False)
 
             # keep GAN cost values for the current minibatch
             # abuses get_cost(y,t) using y_noise as the "target"
-            self.cost_dis[:] = self.cost.costs[0].get_cost(y_data, y_temp, cost_type='dis')
+            self.cost_dis[:] = self.cost.costs[0].get_cost(y_data, y_temp, cost_type='dis') ##<<<--- review how to disc cost is computed here
 
-            # train generator
+            # TRAIN GENERATOR
             if self.current_batch == self.last_gen_batch + self.get_k(self.gen_iter):
                 print(" ---> now training the generator {}-th time".format(self.gen_iter))
-                self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
+                myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
                 Gz = self.fprop_gen(z)
                 y_noise_list = self.fprop_dis(Gz[0])
                 y_noise = y_noise_list[0]  # just getting the WGAN cost
@@ -261,7 +277,7 @@ class myGAN(Model):
                 # keep GAN cost values for the current minibatch
                 # self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_noise, cost_type='gen')
                 #  add something like this with support in callbacks for generator cost displaying??
-                self.cost_dis[:] = self.cost.costs[0].get_cost(y_temp, y_noise, cost_type='dis')
+                self.cost_dis[:] = self.cost.costs[0].get_cost(y_temp, y_noise, cost_type='dis') ##<<<--- review how to disc cost is computed here
                 # accumulate total cost.
                 self.total_cost[:] = self.total_cost + self.cost_dis
                 self.last_gen_batch = self.current_batch
@@ -348,49 +364,15 @@ class myGAN(Model):
             return
         return pdict
 
-    def get_generator_outputs(self, dataset):
-        """
-        Get the activation outputs of the final model layer for the dataset
-
-        Arguments:
-            dataset (NervanaDataIterator): Dataset iterator to perform fit on
-
-        Returns:
-            Host numpy array: the output of the final layer for the entire Dataset
-        """
-        self.initialize(dataset)
-        dataset.reset()  # Move "pointer" back to beginning of dataset
-        n = dataset.nbatches
-        x = self.layers.layers[-1].outputs
-        assert not isinstance(x, list), "Can not get_outputs with Branch terminal"
-        Ypred = None
-        for idx, input_data in enumerate(dataset):
-            x = self.fprop_gen(input_data[0], inference=True)
-            if isinstance(x, list):
-                x = x[0]
-            if Ypred is None:
-                (dim0, dim1) = x.shape
-                Ypred = np.empty((n * dim1, dim0), dtype=x.dtype)
-                nsteps = dim1 // self.be.bsz
-            cur_batch = slice(idx * dim1, (idx + 1) * dim1)
-            Ypred[cur_batch] = x.get().T
-
-        # Handle the recurrent case.
-        if nsteps != 1:
-            b, s = (self.be.bsz, nsteps)
-            Ypred = Ypred.reshape((n, s, b, -1)).transpose(0, 2, 1, 3).copy().reshape(n * b, s, -1)
-
-        return Ypred[:dataset.ndata]
-
 
 # load up the data set
-X, y = temp_3Ddata()
+X, y = temp_3Ddata("/home/azanetti/CERNDATA/EGshuffled.h5")
 X[X < 1e-6] = 0
 mean = np.mean(X, axis=0, keepdims=True)
 max_elem = np.max(np.abs(X))
 print(np.max(np.abs(X)),'max abs element')
 print(np.min(X),'min element')
-X = (X- mean)/max_elem
+X = (X - mean)/max_elem
 print(X.shape, 'X shape')
 print(np.max(X),'max element after normalisation')
 print(np.min(X),'min element after normalisation')
@@ -398,14 +380,16 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.1, test_s
 print(X_train.shape, 'X train shape')
 print(y_train.shape, 'y train shape')
 
+# backend generation and batch size setting
 gen_backend(backend='gpu', batch_size=64)
 
-#X_train.reshape((X_train.shape[0], 25 * 25 * 25))
+# total epochs of training and size of noise vector to feed the generator
+nb_epochs = 1
+latent_size = 256
 
 # setup datasets
-# train_set = EnergyData(X=X_train, Y=y_train, lshape=(1,25,25,25))
-from neon.data import ArrayIterator
-train_set = ArrayIterator(X=X_train, y=y_train, lshape=(1,25,25,25), make_onehot=False)
+train_set = EnergyData(X=X_train, Y=y_train, lshape=(1, 25, 25, 25))
+# train_set = ArrayIterator(X=X_train, y=y_train, lshape=(1,25,25,25), make_onehot=False)
 
 # grab one iteration from the train_set
 iterator = train_set.__iter__()
@@ -418,8 +402,8 @@ assert Y.is_contiguous
 train_set.reset()
 
 # generate test set
-#valid_set =EnergyData(X=X_test, Y=y_test, lshape=(1,25,25,25))
-valid_set =ArrayIterator(X=X_test, y=y_test, lshape=(1,25,25,25), make_onehot=False)
+valid_set =EnergyData(X=X_test, Y=y_test, lshape=(1,25,25,25))
+#valid_set =ArrayIterator(X=X_test, y=y_test, lshape=(1,25,25,25), make_onehot=False)
 
 print 'train_set OK'
 #tate=lt.plot(X_train[0, 12])
@@ -428,7 +412,7 @@ print 'train_set OK'
 # setup weight initialization function
 init = Gaussian(scale=0.01)
 
-# discriminiator using convolution layers
+# discriminator using convolution layers
 lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
 # sigmoid = Logistic() # sigmoid activation function
 conv1 = dict(init=init, batch_norm=False, activation=lrelu, bias=init)
@@ -497,21 +481,22 @@ print G_layers
 
 # G_layers and D_layers are now Tree containers and not Sequential!!
 layers = myGenerativeAdversarial(generator=G_layers, discriminator=D_layers)
-                               #discriminator=Sequential(D_layers, name="Discriminator"))
 print 'layers defined'
 print layers
+
 # setup optimizer
 optimizer = GradientDescentMomentum(learning_rate=1e-3, momentum_coef = 0.9)
 
-# setup cost function as Binary CrossEntropy
+# setup cost functions
 cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
                         GeneralizedCost(costfunc=MeanSquared()),
                         GeneralizedCost(costfunc=MeanSquared())])
-nb_epochs = 1
-latent_size = 256
+
+
 # initialize model
 noise_dim = (latent_size)
-gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=1, wgan_param_clamp=0.9)
+gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=5, wgan_param_clamp=0.9) # try with k > 1 (=5)
+
 # configure callbacks
 callbacks = Callbacks(gan, eval_set=valid_set)
 callbacks.add_callback(TrainMulticostCallback())
@@ -528,26 +513,23 @@ print 'starting training'
 gan.fit(train_set, num_epochs=nb_epochs, optimizer=optimizer,
         cost=cost, callbacks=callbacks)
 
+# saving parameters using service function from myGan class has issues and temporarily using Model
 #gan.save_params('our_gan.prm')
-
-inference_set = train_set #HDF5Iterator(x_new, None, nclass=2, lshape=(latent_size))
-
-x_new = np.random.randn(100, latent_size)
-inference_set = ArrayIterator(X=x_new, make_onehot=False)
 my_generator = Model(gan.layers.generator)
 my_generator.save_params('our_gen.prm')
 my_discriminator = Model(gan.layers.discriminator)
 my_discriminator.save_params('our_disc.prm')
+
+# inference test
 #gan.fill_noise(inference_set)
-test = my_generator.get_outputs(inference_set)
-test = np.float32(test*max_elem + mean)
+inference_set = train_set #HDF5Iterator(x_new, None, nclass=2, lshape=(latent_size))
+x_new = np.random.randn(100, latent_size)
+inference_set = ArrayIterator(X=x_new, make_onehot=False)
+test = my_generator.get_outputs(inference_set) # this invokes the model class method that has been modified for this. Find better way.
 test = test.reshape((100, 25, 25, 25))
-
 print(test.shape, 'generator output')
-
 plt.plot(test[0, :, 12, :])
 plt.savefig('output_img.png')
-
 h5f = h5py.File('output_data.h5', 'w')
 h5f.create_dataset('dataset_1', data=test)
 

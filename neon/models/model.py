@@ -297,7 +297,7 @@ class Model(NervanaObject):
         Ypred = None
         for idx, input_data in enumerate(dataset):
             x = self.fprop(input_data[0], inference=True)
-            if isinstance(x, list):
+            if isinstance(x, list): # to be reviewed, now useful to deal with tree shaped generator
                 x = x[0]
             if Ypred is None:
                 (dim0, dim1) = x.shape
