@@ -65,7 +65,6 @@ my_generator.load_params('our_gen.prm')
 
 # inference test
 #gan.fill_noise(inference_set)
-inference_set = train_set #HDF5Iterator(x_new, None, nclass=2, lshape=(latent_size))
 x_new = np.random.randn(100, latent_size)
 inference_set = ArrayIterator(X=x_new, make_onehot=False)
 test = my_generator.get_outputs(inference_set) # this invokes the model class method that has been modified for this. Find better way.
