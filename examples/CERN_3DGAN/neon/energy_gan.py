@@ -26,6 +26,7 @@ from neon.util.persist import load_obj, save_obj
 import matplotlib.pyplot as plt
 import h5py
 from neon.data import ArrayIterator
+from my_gan_costs import RelativeCost
 
 import logging
 main_logger = logging.getLogger('neon')
@@ -84,9 +85,12 @@ print layers
 optimizer = GradientDescentMomentum(learning_rate=1e-3, momentum_coef = 0.9)
 
 # setup cost functions
+# cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
+#                         GeneralizedCost(costfunc=MeanSquared()),
+#                         GeneralizedCost(costfunc=MeanSquared())])
 cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
-                        GeneralizedCost(costfunc=MeanSquared()),
-                        GeneralizedCost(costfunc=MeanSquared())])
+                        GeneralizedCost(costfunc=RelativeCost()),
+                        GeneralizedCost(costfunc=RelativeCost())])
 
 # initialize model
 noise_dim = (latent_size)

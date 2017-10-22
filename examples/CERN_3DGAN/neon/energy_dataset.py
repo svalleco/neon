@@ -14,7 +14,7 @@ def temp_3Ddata(fileName):
    xtr = np.array(data)
    aa = np.reshape(xtr, (xtr.shape[0], 25*25*25)) 
    sumE = np.sum(aa, axis=(1))
-   Epart = np.array(dtag) #physicall nonsense, just to run the code. Clarify with Sofia how to deal with the dataset
+   Epart = np.array(dtag) #physics nonsense, just to run the code. Clarify with Sofia how to deal with the dataset
    labels = np.stack((Epart, sumE), axis=1)
 
    #temp = np.array(aa) / 100
