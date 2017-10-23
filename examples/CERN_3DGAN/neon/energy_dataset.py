@@ -4,9 +4,6 @@ import h5py
 from neon.data import NervanaDataIterator
 
 def temp_3Ddata(fileName):
-   #xtr = np.random.rand(10000, 25, 25, 25)
-   #labels = np.ones((xtr.shape[0], 2))
-
    f = h5py.File(fileName,"r")
    data = f.get('ECAL')
    dtag =f.get('target')
@@ -15,11 +12,7 @@ def temp_3Ddata(fileName):
    aa = np.reshape(xtr, (xtr.shape[0], 25*25*25)) 
    sumE = np.sum(aa, axis=(1))
    Epart = np.array(dtag)
-   labels = np.stack((Epart[:, 1], sumE), axis=1)
-
-   #temp = np.array(aa) / 100
-   #labels = np.stack((temp[:,1],sumE),axis=1)
-   
+   labels = np.stack((Epart[:, 1]/100, sumE), axis=1)
    return aa.astype(np.float32), labels.astype(np.float32)
 
 def get_output(outputFileName):

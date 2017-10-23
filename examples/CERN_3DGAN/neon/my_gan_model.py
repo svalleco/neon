@@ -206,7 +206,8 @@ class myGAN(Model):
             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
             t = myEnergies[0, :]
             delta_noise_Ep = self.cost.costs[1].costfunc.bprop(t, y_noise_Ep)
-            delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(.5 * t, y_noise_SUMEcal)
+            # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
+            delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(2 * t, y_noise_SUMEcal)
 
             # computing gradient contributions from all three output lines, for discriminator weights
             delta_nnn = self.bprop_dis([delta_noise, delta_noise_Ep, delta_noise_SUMEcal])
@@ -248,11 +249,26 @@ class myGAN(Model):
                 myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
                 Gz = self.fprop_gen(z)
                 y_noise_list = self.fprop_dis(Gz[0])
-                y_noise = y_noise_list[0]  # just getting the WGAN cost
+
+                # getting separate discriminator outputs
+                y_noise = y_noise_list[0]  # getting the Real/Fake
+                y_noise_Ep = y_noise_list[1]  # getting Particle Energy
+                y_noise_SUMEcal = y_noise_list[2]  # getting Total Energy on Cal
+
                 y_temp[:] = y_data
-                delta_noise = self.cost.costs[0].costfunc.bprop_generator(y_noise)
-                delta_dis = self.bprop_dis([delta_noise])
-                self.bprop_gen(delta_dis)
+
+                # computing derivatives of cost function wrt discriminator outputs, on all output lines
+                delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
+                t = myEnergies[0, :]
+                delta_noise_Ep = self.cost.costs[1].costfunc.bprop(t, y_noise_Ep)
+                # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
+                delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(2 * t, y_noise_SUMEcal)
+
+                # computing gradient contributions from all three output lines, for discriminator weights
+                delta_nnn = self.bprop_dis([delta_noise, delta_noise_Ep, delta_noise_SUMEcal])
+                #delta_dis = self.bprop_dis([delta_noise])
+
+                self.bprop_gen(delta_nnn)
                 self.optimizer.optimize(self.layers.generator.layers_to_optimize, epoch=epoch)
                 # keep GAN cost values for the current minibatch
                 # self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_noise, cost_type='gen')

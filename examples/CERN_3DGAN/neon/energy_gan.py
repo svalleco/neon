@@ -52,7 +52,7 @@ print(X_train.shape, 'X train shape')
 print(y_train.shape, 'y train shape')
 
 # total epochs of training and size of noise vector to feed the generator
-nb_epochs = 1
+nb_epochs = 5
 latent_size = 256
 
 # setup datasets
@@ -100,13 +100,13 @@ gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=5, wgan_par
 # configure callbacks
 callbacks = Callbacks(gan, eval_set=valid_set)
 callbacks.add_callback(TrainMulticostCallback())
-# fdir = ensure_dirs_exist(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results/'))
-# fname = os.path.splitext(os.path.basename(__file__))[0] +\
-#     '_[' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + ']'
-# im_args = dict(filename=os.path.join(fdir, fname), hw=32,
-#                num_samples=64, nchan=1, sym_range=True)
-# callbacks.add_callback(GANPlotCallback(**im_args))
-#callbacks.add_save_best_state_callback("./best_state.pkl")
+fdir = ensure_dirs_exist(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results/'))
+fname = os.path.splitext(os.path.basename(__file__))[0] +\
+    '_[' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + ']'
+im_args = dict(filename=os.path.join(fdir, fname), hw=32,
+               num_samples=64, nchan=1, sym_range=True)
+callbacks.add_callback(GANPlotCallback(**im_args))
+callbacks.add_save_best_state_callback("./best_state.pkl")
 
 print 'starting training'
 # run fit
@@ -119,17 +119,4 @@ my_generator = Model(gan.layers.generator)
 my_generator.save_params('our_gen.prm')
 my_discriminator = Model(gan.layers.discriminator)
 my_discriminator.save_params('our_disc.prm')
-
-# # inference test moved to separate file
-# #gan.fill_noise(inference_set)
-# inference_set = train_set #HDF5Iterator(x_new, None, nclass=2, lshape=(latent_size))
-# x_new = np.random.randn(100, latent_size)
-# inference_set = ArrayIterator(X=x_new, make_onehot=False)
-# test = my_generator.get_outputs(inference_set) # this invokes the model class method that has been modified for this. Find better way.
-# test = test.reshape((100, 25, 25, 25))
-# print(test.shape, 'generator output')
-# plt.plot(test[0, :, 12, :])
-# plt.savefig('output_img.png')
-# h5f = h5py.File('output_data.h5', 'w')
-# h5f.create_dataset('dataset_1', data=test)
 
