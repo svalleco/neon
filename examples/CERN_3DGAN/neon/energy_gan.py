@@ -36,7 +36,8 @@ main_logger.setLevel(10)
 gen_backend(backend='gpu', batch_size=64)
 
 # load up the data set
-X, y = temp_3Ddata("/home/azanetti/CERNDATA/EGshuffled.h5")
+#X, y = temp_3Ddata("/home/azanetti/CERNDATA/EGshuffled.h5")
+X, y = temp_3Ddata("/home/azanetti/CERNDATA/Ele_v1_1_2.h5")
 X[X < 1e-6] = 0
 mean = np.mean(X, axis=0, keepdims=True)
 max_elem = np.max(np.abs(X))

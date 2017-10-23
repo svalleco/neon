@@ -9,13 +9,13 @@ def temp_3Ddata(fileName):
 
    f = h5py.File(fileName,"r")
    data = f.get('ECAL')
-   dtag =f.get('TAG')
-   #mykeys = f.keys()
+   dtag =f.get('target')
+   mykeys = f.keys()
    xtr = np.array(data)
    aa = np.reshape(xtr, (xtr.shape[0], 25*25*25)) 
    sumE = np.sum(aa, axis=(1))
-   Epart = np.array(dtag) #physics nonsense, just to run the code. Clarify with Sofia how to deal with the dataset
-   labels = np.stack((Epart, sumE), axis=1)
+   Epart = np.array(dtag)
+   labels = np.stack((Epart[:, 1], sumE), axis=1)
 
    #temp = np.array(aa) / 100
    #labels = np.stack((temp[:,1],sumE),axis=1)
