@@ -1033,7 +1033,7 @@ def get_progress_string(tag, epoch, minibatch, nbatches, cost, time,
         s = u'Epoch {:<3} [{} |{:<%s}| {:4}/{:<4} batches, {} costs, {:.2f}s]' % max_bar_width
         cost = u'({})'.format(u', '.join('{:.2f}'.format(c) for c in cost))
     else:
-        s = u'Epoch {:<3} [{} |{:<%s}| {:4}/{:<4} batches, {:.8f} cost, {:.2f}s]' % max_bar_width
+        s = u'Epoch {:<3} [{} |{:<%s}| {:4}/{:<4} batches, {:.12f} cost, {:.2f}s]' % max_bar_width
     return s.format(epoch, tag, blockchar * bar_width, minibatch, nbatches, cost, time)
 
 
@@ -1166,7 +1166,7 @@ class TrainLoggerCallback(Callback):
             epoch (int): index of epoch that is ending
         """
         _eil = self._get_cached_epoch_loss(callback_data, model, epoch, 'loss')
-        log_str = "Epoch %d complete.  Train Cost %f." % (epoch, model.total_cost)
+        log_str = "Epoch %d complete.  Train Cost %.12f." % (epoch, model.total_cost)
         log_str += "  Eval Cost %f" % _eil['cost'] if _eil else ""
         logger.info(log_str)
 

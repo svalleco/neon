@@ -37,7 +37,7 @@ gen_backend(backend='gpu', batch_size=64)
 
 latent_size = 256
 my_generator = Model(generator())
-my_generator.load_params('our_gen.prm')
+my_generator.load_params('our_gen.prm') #update this name with the name of the new results dir!!!
 
 # inference test
 #gan.fill_noise(inference_set)
@@ -47,6 +47,20 @@ test = my_generator.get_outputs(inference_set) # this invokes the model class me
 test = test.reshape((100, 25, 25, 25))
 print(test.shape, 'generator output')
 plt.plot(test[0, :, 12, :])
-plt.savefig('output_img.png')
-h5f = h5py.File('output_data.h5', 'w')
+my_dir = "inference_results/"
+plt.savefig(my_dir + 'output_img.png')
+h5f = h5py.File(my_dir + 'output_data.h5', 'w')
 h5f.create_dataset('dataset_1', data=test)
+print(" files were saved in {}  \n".format(my_dir))
+
+# #test
+# import os
+# import time
+# import datetime
+# kappa = 18
+# fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results/')
+# fname = os.path.splitext(os.path.basename(__file__))[0] + "-" + time.strftime("%d-%m-%Y-%H-%M-%S") + '_[' + 'kappa_is_{}'.format(kappa) + ']'
+# plt_filename = os.path.join(fdir, fname)
+# plt.plot(test[0, :, 12, :])
+# plt.savefig(plt_filename)
+# print(" file {} was saved \n".format(plt_filename))

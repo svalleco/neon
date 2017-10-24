@@ -1,10 +1,37 @@
+import os
+from datetime import datetime
+from neon.callbacks.callbacks import Callbacks, GANCostCallback, TrainMulticostCallback
+from neon.callbacks.plotting_callbacks import GANPlotCallback
+from neon.initializers import Gaussian, Constant
+from neon.layers import GeneralizedGANCost, Affine, Linear, Sequential, Conv, Deconv, Dropout, Pooling, BatchNorm, BranchNode, GeneralizedCost
+from neon.layers.layer import Linear, Reshape
+from neon.layers.container import Tree, Multicost, LayerContainer, GenerativeAdversarial
+from neon.models.model import Model
+from neon.transforms import Rectlin, Logistic, GANCost, Tanh, MeanSquared
+from neon.util.argparser import NeonArgparser
+from neon.util.persist import ensure_dirs_exist
+from neon.layers.layer import Dropout
+from neon.data.hdf5iterator import HDF5Iterator
+from neon.optimizers import GradientDescentMomentum, RMSProp, Adam
+from neon.optimizers.optimizer import get_param_list
+from neon.backends import gen_backend
+from neon.backends.backend import Block
+from energy_dataset import temp_3Ddata, EnergyData
+from my_gan_layers import discriminator, generator
+from sklearn.model_selection import train_test_split
+from neon.util.persist import load_obj, save_obj
+import h5py
+from neon.data import ArrayIterator
 from neon.layers.container import Tree, Multicost, LayerContainer, GenerativeAdversarial
 from neon.models.model import Model
 from neon.optimizers.optimizer import get_param_list
 from neon.backends.backend import Block
 import numpy as np
 from neon.util.persist import load_obj, save_obj
-
+import matplotlib.pyplot as plt
+import os
+import time
+import h5py
 
 import logging
 main_logger = logging.getLogger('neon')
@@ -246,29 +273,32 @@ class myGAN(Model):
             # TRAIN GENERATOR
             if self.current_batch == self.last_gen_batch + self.get_k(self.gen_iter):
                 print(" ---> now training the generator {}-th time".format(self.gen_iter))
-                myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
-                Gz = self.fprop_gen(z)
-                y_noise_list = self.fprop_dis(Gz[0])
+                for i in range(2): # testing as per Sofia's request 2 iterations on generator
+                    myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
+                    Gz = self.fprop_gen(z)
+                    y_noise_list = self.fprop_dis(Gz[0])
 
-                # getting separate discriminator outputs
-                y_noise = y_noise_list[0]  # getting the Real/Fake
-                y_noise_Ep = y_noise_list[1]  # getting Particle Energy
-                y_noise_SUMEcal = y_noise_list[2]  # getting Total Energy on Cal
+                    # getting separate discriminator outputs
+                    y_noise = y_noise_list[0]  # getting the Real/Fake
+                    y_noise_Ep = y_noise_list[1]  # getting Particle Energy
+                    y_noise_SUMEcal = y_noise_list[2]  # getting Total Energy on Cal
 
-                y_temp[:] = y_data
+                    y_temp[:] = y_data
 
-                # computing derivatives of cost function wrt discriminator outputs, on all output lines
-                delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
-                t = myEnergies[0, :]
-                delta_noise_Ep = self.cost.costs[1].costfunc.bprop(t, y_noise_Ep)
-                # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
-                delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(2 * t, y_noise_SUMEcal)
+                    # computing derivatives of cost function wrt discriminator outputs, on all output lines
+                    delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
+                    t = myEnergies[0, :]
+                    delta_noise_Ep = self.cost.costs[1].costfunc.bprop(t, y_noise_Ep)
+                    # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
+                    delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(2 * t, y_noise_SUMEcal)
 
-                # computing gradient contributions from all three output lines, for discriminator weights
-                delta_nnn = self.bprop_dis([delta_noise, delta_noise_Ep, delta_noise_SUMEcal])
-                #delta_dis = self.bprop_dis([delta_noise])
+                    # computing gradient contributions from all three output lines, for discriminator weights
+                    delta_nnn = self.bprop_dis([delta_noise, delta_noise_Ep, delta_noise_SUMEcal])
+                    #delta_dis = self.bprop_dis([delta_noise])
+                    self.bprop_gen(delta_nnn)
+                    self.layers.generator.set_acc_on(True)
 
-                self.bprop_gen(delta_nnn)
+                self.layers.generator.set_acc_on(False)
                 self.optimizer.optimize(self.layers.generator.layers_to_optimize, epoch=epoch)
                 # keep GAN cost values for the current minibatch
                 # self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_noise, cost_type='gen')
@@ -278,6 +308,33 @@ class myGAN(Model):
                 self.total_cost[:] = self.total_cost + self.cost_dis
                 self.last_gen_batch = self.current_batch
                 self.gen_iter += 1
+
+            #adding brutal temporary saving of plots and hdf5 data
+            if self.current_batch % 100 == 0:
+                # last output of the generator from the backend object (tested with GPU)
+                Gen_output = Gz[0].get()
+
+                #filenames
+                timestamp = time.strftime("%d-%m-%Y-%H-%M")
+                fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results/')
+                plfname = os.path.splitext(os.path.basename(__file__))[0] + "-" + timestamp + \
+                          '_[' + 'batch_n_{}'.format(self.current_batch) + ']'
+                h5fname = os.path.splitext(os.path.basename(__file__))[0] + "-" + timestamp + \
+                          '_[' + 'batch_n_{}'.format(self.current_batch) + '].h5'
+                plt_filename = os.path.join(fdir, plfname)
+                h5_filename = os.path.join(fdir, h5fname)
+
+                #plotting
+                Gen_output = Gen_output.T
+                Gen_output = Gen_output.reshape((64, 25, 25, 25))
+                plt.plot(Gen_output[0, :, 12, :])
+                plt.savefig(plt_filename)
+                print("\nPARTIAL IMAGE Gen_output[0, :, 12, :] --------file {} was saved".format(plt_filename))
+
+                #saving to hdf5 file the total output tensor from the generator
+                h5f = h5py.File(h5_filename, 'w')
+                h5f.create_dataset('dataset_1', data=Gen_output)
+                print("PARTIAL HDF5 file of Gen_output --------file {} was saved\n".format(h5_filename))
 
             self.be.end(Block.minibatch, mb_idx)
             callbacks.on_minibatch_end(epoch, mb_idx)

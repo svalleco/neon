@@ -43,16 +43,16 @@ mean = np.mean(X, axis=0, keepdims=True)
 max_elem = np.max(np.abs(X))
 print(np.max(np.abs(X)),'max abs element')
 print(np.min(X),'min element')
-X = (X - mean)/max_elem
+# X = (X - mean)/max_elem # commented out as per Sofia suggestion
 print(X.shape, 'X shape')
-print(np.max(X),'max element after normalisation')
-print(np.min(X),'min element after normalisation')
+print(np.max(X),'max element after normalisation') #not done
+print(np.min(X),'min element after normalisation') #not done
 X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.1, test_size=0.1, random_state=42)
 print(X_train.shape, 'X train shape')
 print(y_train.shape, 'y train shape')
 
 # total epochs of training and size of noise vector to feed the generator
-nb_epochs = 5
+nb_epochs = 100
 latent_size = 256
 
 # setup datasets
@@ -83,30 +83,31 @@ print 'layers defined'
 print layers
 
 # setup optimizer
-optimizer = GradientDescentMomentum(learning_rate=1e-3, momentum_coef = 0.9)
+#optimizer = GradientDescentMomentum(learning_rate=1e-3, momentum_coef = 0.9)
+optimizer = RMSProp()
 
 # setup cost functions
+cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="modified")), #wasserstein  / modified
+                        GeneralizedCost(costfunc=MeanSquared()),
+                        GeneralizedCost(costfunc=MeanSquared())])
 # cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
-#                         GeneralizedCost(costfunc=MeanSquared()),
-#                         GeneralizedCost(costfunc=MeanSquared())])
-cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
-                        GeneralizedCost(costfunc=RelativeCost()),
-                        GeneralizedCost(costfunc=RelativeCost())])
+#                         GeneralizedCost(costfunc=RelativeCost()),
+#                         GeneralizedCost(costfunc=RelativeCost())])
 
 # initialize model
 noise_dim = (latent_size)
-gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=5, wgan_param_clamp=0.9) # try with k > 1 (=5)
+gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=1) #, wgan_param_clamp=0.9) # try with k > 1 (=5)
 
 # configure callbacks
 callbacks = Callbacks(gan, eval_set=valid_set)
 callbacks.add_callback(TrainMulticostCallback())
-fdir = ensure_dirs_exist(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results/'))
-fname = os.path.splitext(os.path.basename(__file__))[0] +\
-    '_[' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + ']'
-im_args = dict(filename=os.path.join(fdir, fname), hw=32,
-               num_samples=64, nchan=1, sym_range=True)
-callbacks.add_callback(GANPlotCallback(**im_args))
-callbacks.add_save_best_state_callback("./best_state.pkl")
+# fdir = ensure_dirs_exist(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results/'))
+# fname = os.path.splitext(os.path.basename(__file__))[0] +\
+#     '_[' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + ']'
+# im_args = dict(filename=os.path.join(fdir, fname), hw=32,
+#                num_samples=64, nchan=1, sym_range=True)
+# callbacks.add_callback(GANPlotCallback(**im_args))
+# callbacks.add_save_best_state_callback("./best_state.pkl")
 
 print 'starting training'
 # run fit
@@ -115,8 +116,16 @@ gan.fit(train_set, num_epochs=nb_epochs, optimizer=optimizer,
 
 # saving parameters using service function from myGan class has issues and temporarily using Model
 #gan.save_params('our_gan.prm')
+
+import time
+timestamp = time.strftime("%d-%m-%Y-%H-%M-%S")
+
+fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results/')
+generator_file_name = os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + timestamp + '].prm'
+discriminator_file_name = os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + timestamp + '].prm'
+
 my_generator = Model(gan.layers.generator)
-my_generator.save_params('our_gen.prm')
+my_generator.save_params(generator_file_name)
 my_discriminator = Model(gan.layers.discriminator)
-my_discriminator.save_params('our_disc.prm')
+my_discriminator.save_params(discriminator_file_name)
 

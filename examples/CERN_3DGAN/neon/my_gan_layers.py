@@ -2,7 +2,7 @@ from neon.initializers import Gaussian, Constant
 from neon.layers import GeneralizedGANCost, Affine, Linear, Sequential, Conv, Deconv, Dropout, Pooling, BatchNorm, BranchNode, GeneralizedCost
 from neon.layers.layer import Linear, Reshape
 from neon.layers.container import Tree, Multicost, LayerContainer, GenerativeAdversarial
-from neon.transforms import Rectlin, Logistic, GANCost, Tanh, MeanSquared
+from neon.transforms import Rectlin, Logistic, GANCost, Tanh, MeanSquared, Identity
 from neon.layers.layer import Dropout
 
 
@@ -36,14 +36,14 @@ def discriminator():
                 Affine(1024, init=init, activation=lrelu),
                 BatchNorm(),
                 b2,
-                Affine(nout=1, init=init, bias=init, activation=Logistic())
+                Affine(nout=1, init=init, bias=init, activation=Logistic()) # for non-Wasserstein Identity() per Wasserstein?
                 ] #real/fake
     branch2 = [b2,
                Affine(nout=1, init=init, bias=init, activation=lrelu)] #E primary
     branch3 = [b1,
                Linear(1, init=Constant(val=1.0))] #SUM ECAL
 
-    D_layers = Tree([branch1, branch2, branch3], name="Discriminator") #keep weight between branches equal to 1. for now (alphas=(1.,1.,1.) as by default )
+    D_layers = Tree([branch1, branch2, branch3], name="Discriminator", alphas=(6., 1., 1.)) #keep weight between branches equal to 1. for now (alphas=(1.,1.,1.) as by default )
     return D_layers
 
 def generator():
