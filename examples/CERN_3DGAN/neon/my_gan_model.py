@@ -310,7 +310,7 @@ class myGAN(Model):
                 self.gen_iter += 1
 
             #adding brutal temporary saving of plots and hdf5 data
-            if self.current_batch % 100 == 0:
+            if self.current_batch % 50 == 0:
                 # last output of the generator from the backend object (tested with GPU)
                 Gen_output = Gz[0].get()
 
@@ -325,8 +325,9 @@ class myGAN(Model):
                 h5_filename = os.path.join(fdir, h5fname)
 
                 #plotting
-                Gen_output = Gen_output.T
-                Gen_output = Gen_output.reshape((64, 25, 25, 25))
+                Gen_output = Gen_output.T # in model.get_outputs(self, dataset), used in inference script, result of fprop is transposed...
+                Gen_output = Gen_output.reshape((self.be.bsz, 25, 25, 25)) #64 but test with 128
+                plt.figure()
                 plt.plot(Gen_output[0, :, 12, :])
                 plt.savefig(plt_filename)
                 print("\nPARTIAL IMAGE Gen_output[0, :, 12, :] --------file {} was saved".format(plt_filename))

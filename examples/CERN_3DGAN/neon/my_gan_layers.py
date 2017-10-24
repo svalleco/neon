@@ -43,7 +43,7 @@ def discriminator():
     branch3 = [b1,
                Linear(1, init=Constant(val=1.0))] #SUM ECAL
 
-    D_layers = Tree([branch1, branch2, branch3], name="Discriminator", alphas=(6., 1., 1.)) #keep weight between branches equal to 1. for now (alphas=(1.,1.,1.) as by default )
+    D_layers = Tree([branch1, branch2, branch3], name="Discriminator", alphas=(5., .1, .1)) #keep weight between branches equal to 1. for now (alphas=(1.,1.,1.) as by default )
     return D_layers
 
 def generator():
