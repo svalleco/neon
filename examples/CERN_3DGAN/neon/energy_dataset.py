@@ -1,6 +1,9 @@
 import numpy as np
 import h5py
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from neon.data import NervanaDataIterator
 
 def temp_3Ddata(fileName):
@@ -9,6 +12,15 @@ def temp_3Ddata(fileName):
    dtag =f.get('target')
    mykeys = f.keys()
    xtr = np.array(data)
+   print xtr.shape
+   xtr =np.array(np.expand_dims(xtr, axis=1))
+   print xtr.shape
+   plt.imshow(xtr[1,0, :, :, 12])
+   #plt.plot(X[0, 12, :, :])
+   plt.savefig('test_xy')
+   plt.imshow(xtr[1, 0, :, 12, :])
+   #plt.plot(X[0, 12, :, :])
+   plt.savefig('test_xz')
    aa = np.reshape(xtr, (xtr.shape[0], 25*25*25)) 
    sumE = np.sum(aa, axis=(1))
    Epart = np.array(dtag)

@@ -326,8 +326,8 @@ class myGAN(Model):
 
                 #plotting
                 Gen_output = Gen_output.T
-                Gen_output = Gen_output.reshape((64, 25, 25, 25))
-                plt.plot(Gen_output[0, :, 12, :])
+                Gen_output = Gen_output.reshape((120, 1, 25, 25, 25))
+                plt.plot(Gen_output[0, 0, :, 12, :])
                 plt.savefig(plt_filename)
                 print("\nPARTIAL IMAGE Gen_output[0, :, 12, :] --------file {} was saved".format(plt_filename))
 

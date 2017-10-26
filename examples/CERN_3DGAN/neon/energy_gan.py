@@ -33,26 +33,29 @@ main_logger = logging.getLogger('neon')
 main_logger.setLevel(10)
 
 # backend generation and batch size setting
-gen_backend(backend='gpu', batch_size=64)
+gen_backend(backend='gpu', batch_size=120)
 
 # load up the data set
 #X, y = temp_3Ddata("/home/azanetti/CERNDATA/EGshuffled.h5")
-X, y = temp_3Ddata("/home/azanetti/CERNDATA/Ele_v1_1_2.h5")
+X, y = temp_3Ddata("/data/svalleco/GAN/data/Ele_v1_1_2.h5")
 X[X < 1e-6] = 0
-mean = np.mean(X, axis=0, keepdims=True)
-max_elem = np.max(np.abs(X))
-print(np.max(np.abs(X)),'max abs element')
-print(np.min(X),'min element')
+#mean = np.mean(X, axis=0, keepdims=True)
+#max_elem = np.max(np.abs(X))
+#print(np.max(np.abs(X)),'max abs element')
+#print(np.min(X),'min element')
 # X = (X - mean)/max_elem # commented out as per Sofia suggestion
-print(X.shape, 'X shape')
-print(np.max(X),'max element after normalisation') #not done
-print(np.min(X),'min element after normalisation') #not done
-X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.1, test_size=0.1, random_state=42)
+#print(X.shape, 'X shape')
+#print(np.max(X),'max element after normalisation') #not done
+#print(np.min(X),'min element after normalisation') #not done
+X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9, test_size=0.1, random_state=42)
 print(X_train.shape, 'X train shape')
 print(y_train.shape, 'y train shape')
 
+
+
+
 # total epochs of training and size of noise vector to feed the generator
-nb_epochs = 100
+nb_epochs = 30
 latent_size = 256
 
 # setup datasets
@@ -87,16 +90,17 @@ print layers
 optimizer = RMSProp()
 
 # setup cost functions
-cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="modified")), #wasserstein  / modified
-                        GeneralizedCost(costfunc=MeanSquared()),
-                        GeneralizedCost(costfunc=MeanSquared())])
+cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
+#cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="modified")), #wasserstein  / modified
+                        GeneralizedCost(costfunc=RelativeCost()),
+                        GeneralizedCost(costfunc=RelativeCost())])
 # cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
 #                         GeneralizedCost(costfunc=RelativeCost()),
 #                         GeneralizedCost(costfunc=RelativeCost())])
 
 # initialize model
 noise_dim = (latent_size)
-gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=1) #, wgan_param_clamp=0.9) # try with k > 1 (=5)
+gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=5, wgan_param_clamp=0.9,wgan_train_sched=True) # try with k > 1 (=5)
 
 # configure callbacks
 callbacks = Callbacks(gan, eval_set=valid_set)
