@@ -70,6 +70,22 @@ print X  # this should be shape (N, 25,25, 25)
 print Y  # this should be shape (Y1,Y2) of shapes (1)(1)
 assert X.is_contiguous
 assert Y.is_contiguous
+tt = X_train.reshape(X_train.shape[0], 25, 25, 25)
+plt.figure()
+plt.plot(tt[0, :, 12, :])
+my_dir = "results/"
+plt.savefig(my_dir + 'example_from_train_set_img_0.png')
+
+plt.figure()
+plt.plot(tt[30, :, 12, :])
+my_dir = "results/"
+plt.savefig(my_dir + 'example_from_train_set_img_30.png')
+
+plt.figure()
+plt.plot(tt[50, :, 12, :])
+my_dir = "results/"
+plt.savefig(my_dir + 'example_from_train_set_img_50.png')
+
 train_set.reset()
 
 # generate test set
@@ -87,7 +103,8 @@ print layers
 
 # setup optimizer
 #optimizer = GradientDescentMomentum(learning_rate=1e-3, momentum_coef = 0.9)
-optimizer = RMSProp()
+#optimizer = RMSProp()
+optimizer = Adam(learning_rate=5e-5, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
 
 # setup cost functions
 cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
