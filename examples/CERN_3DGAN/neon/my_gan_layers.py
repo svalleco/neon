@@ -9,80 +9,88 @@ from my_gan_control import *
 
 def discriminator():
     # setup weight initialization function
-    if my_xavier:
-        init = Xavier()
+
+
+    if discriminator_option_1:
+
+        if my_xavier:
+            init = Xavier()
+        else:
+            init = Gaussian(scale=0.01)
+
+        # discriminator using convolution layers
+        lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
+        # sigmoid = Logistic() # sigmoid activation function
+        conv1 = dict(init=init, batch_norm=False, activation=lrelu, bias=init)
+        conv2 = dict(init=init, batch_norm=False, activation=lrelu, padding=2, bias=init)
+        conv3 = dict(init=init, batch_norm=False, activation=lrelu, padding=1, bias=init)
+        b1 = BranchNode("b1")
+        b2 = BranchNode("b2")
+        branch1 = [b1,
+                    Conv((5, 5, 5, 32), **conv1),
+                    Dropout(keep = 0.8),
+                    Conv((5, 5, 5, 8), **conv2),
+                    BatchNorm(),
+                    Dropout(keep = 0.8),
+                    Conv((5, 5, 5, 8), **conv2),
+                    BatchNorm(),
+                    Dropout(keep = 0.8),
+                    Conv((5, 5, 5, 8), **conv3),
+                    BatchNorm(),
+                    Dropout(keep = 0.8),
+                    Pooling((2, 2, 2)),
+                    Affine(1024, init=init, activation=lrelu),
+                    BatchNorm(),
+                    Affine(1024, init=init, activation=lrelu),
+                    BatchNorm(),
+                    b2,
+                    Affine(nout=1, init=init, bias=init, activation=Logistic()) # for non-Wasserstein Identity() per Wasserstein?
+                    ] #real/fake
+        branch2 = [b2,
+                   Affine(nout=1, init=init, bias=init, activation=lrelu)] #E primary
+        branch3 = [b1,
+                   Linear(nout=1, init=Constant(val=1.0))] #SUM ECAL
     else:
-        init = Gaussian(scale=0.01)
 
-    # discriminator using convolution layers
-    lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
-    # sigmoid = Logistic() # sigmoid activation function
-    conv1 = dict(init=init, batch_norm=False, activation=lrelu, bias=init)
-    conv2 = dict(init=init, batch_norm=False, activation=lrelu, padding=2, bias=init)
-    conv3 = dict(init=init, batch_norm=False, activation=lrelu, padding=1, bias=init)
-    b1 = BranchNode("b1")
-    b2 = BranchNode("b2")
-    branch1 = [b1,
-                Conv((5, 5, 5, 32), **conv1),
-                Dropout(keep = 0.8),
-                Conv((5, 5, 5, 8), **conv2),
-                BatchNorm(),
-                Dropout(keep = 0.8),
-                Conv((5, 5, 5, 8), **conv2),
-                BatchNorm(),
-                Dropout(keep = 0.8),
-                Conv((5, 5, 5, 8), **conv3),
-                BatchNorm(),
-                Dropout(keep = 0.8),
-                Pooling((2, 2, 2)),
-                Affine(1024, init=init, activation=lrelu),
-                BatchNorm(),
-                Affine(1024, init=init, activation=lrelu),
-                BatchNorm(),
-                b2,
-                Affine(nout=1, init=init, bias=init, activation=Logistic()) # for non-Wasserstein Identity() per Wasserstein?
-                ] #real/fake
-    branch2 = [b2,
-               Affine(nout=1, init=init, bias=init, activation=lrelu)] #E primary
-    branch3 = [b1,
-               Linear(nout=1, init=Constant(val=1.0))] #SUM ECAL
+        #setup weight initialization function
+        if my_xavier:
+            init = Xavier()
+        else:
+            init = Gaussian(scale=0.01)
 
-    #setup weight initialization function
-    # init = Gaussian(scale=1)
-    #
-    # # discriminator using convolution layers
-    # lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
-    # # sigmoid = Logistic() # sigmoid activation function
-    # conv1 = dict(init=init, batch_norm=False, activation=lrelu, bias=init)
-    # conv2 = dict(init=init, batch_norm=False, activation=lrelu, padding=2, bias=init)
-    # conv3 = dict(init=init, batch_norm=False, activation=lrelu, padding=1, bias=init)
-    # b1 = BranchNode("b1")
-    # b2 = BranchNode("b2")
-    # branch1 = [b1,
-    #            Conv((5, 5, 5, 32), **conv1),
-    #            Dropout(keep=0.8),
-    #            Conv((5, 5, 5, 8), **conv2),
-    #            BatchNorm(),
-    #            Dropout(keep=0.8),
-    #            Conv((5, 5, 5, 8), **conv2),
-    #            BatchNorm(),
-    #            Dropout(keep=0.8),
-    #            Conv((5, 5, 5, 8), **conv3),
-    #            BatchNorm(),
-    #            Dropout(keep=0.8),
-    #            Pooling((2, 2, 2)),
-    #            # Affine(1024, init=init, activation=lrelu),
-    #            # BatchNorm(),
-    #            # Affine(1024, init=init, activation=lrelu),
-    #            # BatchNorm(),
-    #            b2,
-    #            Affine(nout=1, init=init, bias=init, activation=Logistic())
-    #            # for non-Wasserstein Identity() per Wasserstein?
-    #            ]  # real/fake
-    # branch2 = [b2,
-    #            Affine(nout=1, init=init, bias=init, activation=lrelu)]  # E primary
-    # branch3 = [b1,
-    #            Linear(1, init=Constant(val=1.0))]  # SUM ECAL
+        # discriminator using convolution layers
+        lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
+        # sigmoid = Logistic() # sigmoid activation function
+        conv1 = dict(init=init, batch_norm=False, activation=lrelu, bias=init)
+        conv2 = dict(init=init, batch_norm=False, activation=lrelu, padding=2, bias=init)
+        conv3 = dict(init=init, batch_norm=False, activation=lrelu, padding=1, bias=init)
+        b1 = BranchNode("b1")
+        b2 = BranchNode("b2")
+        branch1 = [b1,
+                   Conv((5, 5, 5, 32), **conv1),
+                   Dropout(keep=0.8),
+                   Conv((5, 5, 5, 8), **conv2),
+                   BatchNorm(),
+                   Dropout(keep=0.8),
+                   Conv((5, 5, 5, 8), **conv2),
+                   BatchNorm(),
+                   Dropout(keep=0.8),
+                   Conv((5, 5, 5, 8), **conv3),
+                   BatchNorm(),
+                   Dropout(keep=0.8),
+                   Pooling((2, 2, 2)),
+                   # Affine(1024, init=init, activation=lrelu),
+                   # BatchNorm(),
+                   # Affine(1024, init=init, activation=lrelu),
+                   # BatchNorm(),
+                   b2,
+                   Affine(nout=1, init=init, bias=init, activation=Logistic())
+                   # for non-Wasserstein Identity() per Wasserstein?
+                   ]  # real/fake
+        branch2 = [b2,
+                   Affine(nout=1, init=init, bias=init, activation=lrelu)]  # E primary
+        branch3 = [b1,
+                   Linear(1, init=Constant(val=1.0))]  # SUM ECAL
 
     if my_three_lines:
         D_layers = Tree([branch1, branch2, branch3], name="Discriminator", alphas=my_alpha)

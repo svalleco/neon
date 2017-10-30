@@ -45,12 +45,13 @@ def main():
     main_logger.setLevel(10)
 
     # backend generation and batch size setting
-    batch_size = 128
-    gen_backend(backend='gpu', batch_size=128)
+    batch_size = my_gan_control_batch_size
+    gen_backend(backend='gpu', batch_size=batch_size)
 
     # total epochs of training and size of noise vector to feed the generator
-    nb_epochs = 30
-    latent_size = 256
+    nb_epochs = my_gan_control_nb_epochs
+    latent_size = my_gan_control_latent_size
+
     data_filename = "/home/azanetti/CERNDATA/Ele_v1_1_2.h5"
     # load up the data set
     if my_use_hdf5_iterator:

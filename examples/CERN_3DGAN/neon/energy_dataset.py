@@ -351,17 +351,6 @@ class my_gan_HDF5Iterator(ArrayIterator):
                 mini_batch_out[0, :] = mini_batch_out[1, :] / 100.
                 mini_batch_out[1, :] = sumE
 
-                # # N x W*H*D
-                # aa = np.reshape(xtr, (xtr.shape[0], 25 * 25 * 25))
-                # sumE = np.sum(aa, axis=(1))
-                # Epart = np.array(dtag)
-                #
-                # if my_debug:
-                #     Epart = Epart[:10000, :]  # just to speed up debugging
-                #
-                # labels = np.stack((Epart[:, 1] / 100, sumE), axis=1)
-                # return aa.astype(np.float32), labels.astype(np.float32)
-
                 if self.be.bsz > bsz:
                     mini_batch_out[:, bsz:] = self.out[:(self.be.bsz - bsz)].T
 

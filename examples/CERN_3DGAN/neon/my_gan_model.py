@@ -385,7 +385,7 @@ class myGAN(Model):
                     if my_three_lines:
                         delta_nnn = self.bprop_dis([delta_noise, delta_noise_Ep, delta_noise_SUMEcal])
                     else:
-                        delta_nnn = self.bprop_dis([delta_noise, 0 * delta_noise_Ep, 0 *    delta_noise_SUMEcal])
+                        delta_nnn = self.bprop_dis([delta_noise, 0 * delta_noise_Ep, 0 * delta_noise_SUMEcal])
 
                     # generator backbrop
                     self.bprop_gen(delta_nnn)
