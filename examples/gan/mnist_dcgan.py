@@ -99,6 +99,11 @@ im_args = dict(filename=os.path.join(fdir, fname), hw=27,
 callbacks.add_callback(GANPlotCallback(**im_args))
 callbacks.add_callback(GANCostCallback())
 
+
+iterator = train_set.__iter__()
+(X, Y) = iterator.next()
+train_set.reset()
+
 # run fit
 gan.fit(train_set, optimizer=optimizer,
         num_epochs=args.epochs, cost=cost, callbacks=callbacks)
