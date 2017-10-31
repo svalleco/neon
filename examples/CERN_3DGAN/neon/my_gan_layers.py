@@ -10,13 +10,17 @@ from my_gan_control import *
 def discriminator():
     # setup weight initialization function
 
-
     if discriminator_option_1:
 
         if my_xavier:
-            init = Xavier()
+            init =  Xavier()
         else:
             init = Gaussian(scale=0.01)
+
+        if my_control_gan_Wasserstein:
+            Top_Layer = Linear(nout=1, init=init)
+        else:
+            Top_Layer = Affine(nout=1, init=init, bias=init, activation=Logistic())
 
         # discriminator using convolution layers
         lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
@@ -44,7 +48,7 @@ def discriminator():
                     Affine(1024, init=init, activation=lrelu),
                     BatchNorm(),
                     b2,
-                    Affine(nout=1, init=init, bias=init, activation=Logistic()) # for non-Wasserstein Identity() per Wasserstein?
+                    Top_Layer #   Affine(nout=1, init=init, bias=init, activation=Logistic()) # for non-Wasserstein Identity() per Wasserstein?
                     ] #real/fake
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, activation=lrelu)] #E primary
@@ -57,6 +61,11 @@ def discriminator():
             init = Xavier()
         else:
             init = Gaussian(scale=0.01)
+
+        if my_control_gan_Wasserstein:
+            Top_Layer = Linear(nout=1, init=init)
+        else:
+            Top_Layer = Affine(nout=1, init=init, bias=init, activation=Logistic())
 
         # discriminator using convolution layers
         lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
@@ -84,8 +93,8 @@ def discriminator():
                    # Affine(1024, init=init, activation=lrelu),
                    # BatchNorm(),
                    b2,
-                   Affine(nout=1, init=init, bias=init, activation=Logistic())
-                   # for non-Wasserstein Identity() per Wasserstein?
+                   Top_Layer #Affine(nout=1, init=init, bias=init, activation=Logistic())
+                   # for non-Wasserstein Identity()/Linear() per Wasserstein
                    ]  # real/fake
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, activation=lrelu)]  # E primary
@@ -96,14 +105,18 @@ def discriminator():
         D_layers = Tree([branch1, branch2, branch3], name="Discriminator", alphas=my_alpha)
         print("Using Three lines with alpha = {}".format(my_alpha))
     else:
-        D_layers = Tree([branch1, branch2, branch3], name="Discriminator", alphas=my_alpha_balanced) # do not set to 0 otherwise NANs!
+        D_layers = Tree([branch1, branch2, branch3], name="Discriminator", alphas=my_alpha_balanced)
     return D_layers
+
 
 def generator():
 
     if generator_option_1:
+        if my_xavier:
+            init_gen = Xavier()
+        else:
+            init_gen = Gaussian(scale=0.001)
         lrelu = Rectlin(slope=0.1)  # leaky relu
-        init_gen = Gaussian(scale=0.001)
         relu = Rectlin(slope=0)  # relu for generator
         pad1 = dict(pad_h=2, pad_w=2, pad_d=2)
         str1 = dict(str_h=2, str_w=2, str_d=2)

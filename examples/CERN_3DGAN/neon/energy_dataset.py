@@ -333,10 +333,10 @@ class my_gan_HDF5Iterator(ArrayIterator):
             mini_batch_in[:, :bsz] = my_buf.reshape((np.array(self.lshape)).prod(), bsz) #reshaping into 25*25*25xN
             # transposing above does N,x,y,z into z,y,x,N
 
-
-
             if self.be.bsz > bsz:
                 mini_batch_in[:, bsz:] = xdev[:(self.be.bsz - bsz), :].T.astype(np.float32)
+
+            # before pushing to device, could center and normalize here ... MISSING
 
             # push to device
             self.gen_input(mini_batch_in)

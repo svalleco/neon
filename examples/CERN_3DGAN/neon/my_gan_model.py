@@ -204,11 +204,10 @@ class myGAN(Model):
     def plot_partials_generations(self, Gen_output):
 
         # filenames
-        timestamp = time.strftime("%d-%m-%Y-%H-%M")
         fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
-        plfname = os.path.splitext(os.path.basename(__file__))[0] + "-" + timestamp + \
+        plfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + timestamp + \
                   '_[' + 'batch_n_{}'.format(self.current_batch) + ']'
-        h5fname = os.path.splitext(os.path.basename(__file__))[0] + "-" + timestamp + \
+        h5fname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + timestamp + \
                   '_[' + 'batch_n_{}'.format(self.current_batch) + '].h5'
         plt_filename = os.path.join(fdir, plfname)
         h5_filename = os.path.join(fdir, h5fname)
@@ -226,18 +225,6 @@ class myGAN(Model):
             plt.savefig(plt_filename + f_ending )
             plt.close()
             print("\nPARTIAL IMAGE Gen_output {} was saved".format(plt_filename + f_ending))
-
-            #
-            # plt.figure()
-            # plt.plot(Gen_output_3D[:, :, 12, 0])
-            # plt.savefig(plt_filename + "_xy")
-            # plt.close()
-            # print("\nPARTIAL IMAGE Gen_output[:, :, 12, 0] = xy {} was saved".format(plt_filename + "_xy"))
-            # plt.figure()
-            # plt.plot(Gen_output_3D[12, :, :, 0])
-            # plt.savefig(plt_filename + "_yz")
-            # plt.close()
-            # print("\nPARTIAL IMAGE Gen_output[12, :, :] = yz {} was saved".format(plt_filename + "_yz"))
 
         # saving to hdf5 file the total output tensor from the generator
         if save_training_progress:
@@ -356,7 +343,7 @@ class myGAN(Model):
             if self.current_batch == 0 or self.current_batch == self.last_gen_batch + self.get_k(self.gen_iter):
                 print(" ---> now training the generator {}-th time".format(self.gen_iter))
 
-                ntimes_train_gen = 2 if my_three_lines else 1
+                ntimes_train_gen = 2 if (my_three_lines and not my_control_gan_Wasserstein) else 1
 
                 self.layers.generator.set_acc_on(True)
                 for i in range(ntimes_train_gen):

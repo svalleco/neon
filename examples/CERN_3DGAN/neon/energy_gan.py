@@ -37,7 +37,7 @@ def print_figure(my_tensor, filename):
         plt.imshow(my_tensor)
     else:
         plt.plot(my_tensor)
-    plt.savefig(res_dir + filename)
+    plt.savefig(res_dir + my_run_random_prefix + filename)
 
 def main():
     # my code here
@@ -113,10 +113,15 @@ def main():
         print layers
 
     # setup optimizer
-    optimizer = Adam(learning_rate=5e-4, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
+    learning_rate = my_gan_control_LR
+    optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
 
     # setup cost functions
-    cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="modified")), #wasserstein  / modified /original
+    if my_control_gan_Wasserstein:
+        my_func = "wasserstein"
+    else:
+        my_func = "modified"
+    cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)), #wasserstein  / modified /original
                             GeneralizedCost(costfunc=MeanSquared()),
                             GeneralizedCost(costfunc=MeanSquared())])
     # cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
@@ -143,8 +148,8 @@ def main():
     timestamp = time.strftime("%d-%m-%Y-%H-%M-%S")
 
     fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
-    generator_file_name = os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + timestamp + '].prm'
-    discriminator_file_name = os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + timestamp + '].prm'
+    generator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + timestamp + '].prm'
+    discriminator_file_name = my_run_random_prefix +  os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + timestamp + '].prm'
 
     my_generator = Model(gan.layers.generator)
     my_generator.save_params(generator_file_name)
