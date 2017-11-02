@@ -4,7 +4,7 @@ import time
 # control parameters of my_gan
 res_dir = "results/"
 my_debug = True
-my_three_lines = False
+my_three_lines = True
 my_alpha = (6, 2, 1)
 my_alpha_balanced = (1, 1, 1) # 0 multiplier in my_gan_model will apply in this case (my_three_lines = True) on lines other than real/fake
 my_gan_lshape = (1, 25, 25, 25)
@@ -18,7 +18,7 @@ my_xavier_gen = False
 my_gan_control_batch_size = 128
 my_gan_control_nb_epochs = 30
 my_gan_control_latent_size = 256
-my_gan_control_LR = 5e-5
+my_gan_control_LR = 1e-5
 my_compute_all_costs = True
 
 my_control_gan_Wasserstein = False # with this on cost displayed is 0.0000000;

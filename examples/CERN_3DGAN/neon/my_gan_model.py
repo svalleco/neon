@@ -432,7 +432,7 @@ class myGAN(Model):
                 if my_compute_all_costs:
                     self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_noise_Ep, t)
                     self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_noise_SUMEcal, 2 * t)
-                    # print("MODEL: END OF GENERATOR TRAINING: COSTS: Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}".format(self.cost_dis[0], self.cost_dis_Ep[0, 0], self.cost_dis_SUMEcal[0 ,0]))
+                    print("MODEL: END OF GENERATOR TRAINING: COSTS: Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}".format(self.cost_dis[0], self.cost_dis_Ep[0, 0], self.cost_dis_SUMEcal[0 ,0]))
                     # print("\nEstimated SUM")
                     # print(y_noise_SUMEcal.get())
                     # print("\nOne sample of generated Image values")
