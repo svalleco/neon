@@ -190,8 +190,8 @@ class myGAN(Model):
         self.fill_noise_sampledE(self.z0, normal=(self.noise_type == 'normal'))
         #buffers for costs
         self.cost_dis = np.empty((1,), dtype=np.float32)
-        self.cost_dis_Ep = np.empty((1,1), dtype=np.float32) #TODO review--------------
-        self.cost_dis_SUMEcal = np.empty((1,1), dtype=np.float32)#TODO review--------------
+        self.cost_dis_Ep = np.empty((1,), dtype=np.float32) #TODO review--------------
+        self.cost_dis_SUMEcal = np.empty((1,), dtype=np.float32)#TODO review--------------
         self.cost_gen = np.empty((1,), dtype=np.float32)#TODO review--------------
 
         self.current_batch = self.gen_iter = self.last_gen_batch = 0
@@ -225,10 +225,10 @@ class myGAN(Model):
         file_name_endings = ["_xz", "_xy", "_yz"]
         for num_pics, tens_to_pic, f_ending in zip([0, 1, 2], my_views, file_name_endings  ):
             plt.figure()
-            plt.title("Ep_r:{0:.3f} R/F:{1:.3f} Ep_e:{2:.3f} Ecal_e:{3:.3f}".format(cond_labels[0, 0],
-                                                                                    prob_fake_real[0, 0],
-                                                                                    Ep_estimated[0, 0],
-                                                                                    SUMEcal_estimated[0, 0]))
+            plt.title("Ep_r:{0:.2f} R/F:{1:.2f} Ep_e:{2:.2f} Ecal_e:{3:.2f}".format\
+                          (cond_labels[0,0], prob_fake_real[0,0], Ep_estimated[0,0], SUMEcal_estimated[0,0]))
+
+
             if plot_matrix:
              plt.imshow(tens_to_pic)
             else:
@@ -307,8 +307,8 @@ class myGAN(Model):
             # computing derivatives of cost function wrt discriminator outputs, on all output lines
             # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
-            delta_noise_Ep = self.cost.costs[1].costfunc.bprop(t, y_noise_Ep)
-            delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(2 * t, y_noise_SUMEcal)
+            delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
+            delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, 2 * t)
 
             # reminder: how to execute OpTreeNodes:
             # Then, f is an op - tree(neon.backends.backend.OpTreeNode).We
@@ -345,8 +345,8 @@ class myGAN(Model):
 
             # computing derivatives of cost function wrt discriminator outputs, on all output lines
             delta_data = self.cost.costs[0].costfunc.bprop_data(y_data)
-            delta_data_Ep = self.cost.costs[1].costfunc.bprop(labels[0, :], y_data_Ep)
-            delta_data_SUMEcal = self.cost.costs[2].costfunc.bprop(labels[1, :], y_data_SUMEcal)
+            delta_data_Ep = self.cost.costs[1].costfunc.bprop(y_data_Ep, labels[0, :])
+            delta_data_SUMEcal = self.cost.costs[2].costfunc.bprop(y_data_SUMEcal, labels[1, :])
 
             # computing gradient contributions from all three output lines, for discriminator weights
             if my_three_lines:
@@ -367,13 +367,14 @@ class myGAN(Model):
             # print(y_data_SUMEcal.get())
             # print("SUMEcal from the data minibatch\n")
             # print(labels[1, :].get())
-            # if my_compute_all_costs:
-            #     self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_data_Ep, labels[0, :])
-            #     self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_data_SUMEcal, labels[1, :])
-            #     print("1 - MODEL: END OF DISCRMINATOR TRAINING: COSTS: Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}".format(self.cost_dis[0], self.cost_dis_Ep[0, 0], self.cost_dis_SUMEcal[0 ,0]))
-            #     # TODO: why computing generator cost affect the cost displayed...
-            #     # TODO: ...by the ProgressBar callback, actually written by TrainCostCallback?
-            #     #self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_temp, cost_type='gen')
+            if my_compute_all_costs:
+                self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_data_Ep[0], labels[0, :][0])
+                self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_data_SUMEcal[0], labels[1, :][0])
+                print("1 - MODEL: END OF DISCRMINATOR TRAINING: COSTS: Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}".format\
+                          (self.cost_dis[0], self.cost_dis_Ep[0], self.cost_dis_SUMEcal[0]))
+                # TODO: why computing generator cost affect the cost displayed...
+                # TODO: ...by the ProgressBar callback, actually written by TrainCostCallback?
+                #self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_temp, cost_type='gen')
 
 
             ############################# 3 - TRAIN GENERATOR
@@ -388,6 +389,7 @@ class myGAN(Model):
 
                 # generator cab trained more times before go back to discr training
                 ntimes_train_gen = 2 if (my_three_lines and not my_control_gan_Wasserstein) else 1
+
                 for i in range(ntimes_train_gen):
 
                     #noise sample and list of disriminator outputs
@@ -407,8 +409,8 @@ class myGAN(Model):
                     # computing derivatives of cost functions wrt discriminator outputs, on all output lines
                     # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
                     delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
-                    delta_noise_Ep = self.cost.costs[1].costfunc.bprop(t, y_noise_Ep)
-                    delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(2 * t, y_noise_SUMEcal)
+                    delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
+                    delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, 2 * t)
 
                     # discriminator backprop: computing gradient contributions from all three output lines, for discriminator weights
                     if my_three_lines:
@@ -430,14 +432,15 @@ class myGAN(Model):
                 # add something like this with support in callbacks for generator cost displaying?
                 self.cost_dis[:] = self.cost.costs[0].get_cost(y_temp, y_noise, cost_type='dis')
                 if my_compute_all_costs:
-                    self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_noise_Ep, t)
-                    self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_noise_SUMEcal, 2 * t)
-                    print("MODEL: END OF GENERATOR TRAINING: COSTS: Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}".format(self.cost_dis[0], self.cost_dis_Ep[0, 0], self.cost_dis_SUMEcal[0 ,0]))
+                    self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_noise_Ep[0], t)
+                    self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_noise_SUMEcal[0], 2 * t)
+                    self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_noise, cost_type='gen')
+                    print("MODEL: END OF GENERATOR TRAINING: COSTS: Discr. Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}  Generator cost: {}".format\
+                              (self.cost_dis[0], self.cost_dis_Ep[0], self.cost_dis_SUMEcal[0], self.cost_gen[0]))
                     # print("\nEstimated SUM")
                     # print(y_noise_SUMEcal.get())
                     # print("\nOne sample of generated Image values")
                     # print(Gz[0].get()[:, 0])
-                    #self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_noise, cost_type='gen')
 
                 # accumulate total cost.
                 self.total_cost[:] = self.total_cost + self.cost_dis

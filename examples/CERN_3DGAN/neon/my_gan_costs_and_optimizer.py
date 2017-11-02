@@ -37,10 +37,11 @@ class RelativeCost(Cost):
         """
         Define the cost function and its gradient as lambda functions.
         """
-        self.func = lambda y, t: self.be.mean(self.be.absolute(self.be.divide((y - t), t)), axis=0) / 2.0
-        self.funcgrad = lambda y, t: (1.0 /(t * y.shape[0]))
+        self.func = lambda y, t: self.be.mean(self.be.absolute(self.be.divide((y - t), t)), axis=0)
+        eps = 10e-8
+        self.funcgrad = lambda y, t: (1.0 /((t + eps) * y.shape[0]))
 
 class DummyOptimizer(Optimizer):
-    def optimize(self, layer_list, epoch):
 
+    def optimize(self, layer_list, epoch):
         pass

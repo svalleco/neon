@@ -7,7 +7,7 @@ from neon.layers import GeneralizedGANCost, Affine, Linear, Sequential, Conv, De
 from neon.layers.layer import Linear, Reshape
 from neon.layers.container import Tree, Multicost, LayerContainer, GenerativeAdversarial
 from neon.models.model import Model
-from neon.transforms import Rectlin, Logistic, GANCost, Tanh, MeanSquared
+from neon.transforms import Rectlin, Logistic, GANCost, Tanh, MeanSquared, SumSquared
 from neon.util.argparser import NeonArgparser
 from neon.util.persist import ensure_dirs_exist
 from neon.layers.layer import Dropout
@@ -125,8 +125,8 @@ def main():
     else:
         my_func = "modified"
     cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)), #wasserstein  / modified /original
-                            GeneralizedCost(costfunc=MeanSquared()),
-                            GeneralizedCost(costfunc=MeanSquared())])
+                            GeneralizedCost(costfunc=RelativeCost()),
+                            GeneralizedCost(costfunc=RelativeCost())])
     # cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
     #                         GeneralizedCost(costfunc=RelativeCost()),
     #                         GeneralizedCost(costfunc=RelativeCost())])
