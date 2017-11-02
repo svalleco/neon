@@ -783,6 +783,8 @@ class GAN(Model):
             # keep GAN cost values for the current minibatch
             # abuses get_cost(y,t) using y_noise as the "target"
             self.cost_dis[:] = self.cost.get_cost(y_data, y_temp, cost_type='dis')
+            #why computing cost here? no need... as it is recomputed at #783...
+            # just to have it in case WGANs?
 
             # train generator
             if self.current_batch == self.last_gen_batch + self.get_k(self.gen_iter):
@@ -810,10 +812,10 @@ class GAN(Model):
         # across all the minibatches we trained on the generator
         assert self.gen_iter > last_gen_iter, \
             "at least one generator iteration is required for total cost estimation in this epoch"
-        self.total_cost[:] = self.total_cost / (self.gen_iter - last_gen_iter)
+        self.total_cost[:] = self.total_cost / (self.gen_iter - last_gen_iter) # what total_cost is for?
 
         # Package a batch of data for plotting
-        self.data_batch, self.noise_batch = x, self.fprop_gen(self.z0)
+        self.data_batch, self.noise_batch = x, self.fprop_gen(self.z0) # how to best leverage this data with Neon native tools?
 
     def fprop_gen(self, x, inference=False):
         """

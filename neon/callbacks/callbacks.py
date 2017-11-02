@@ -648,7 +648,8 @@ class TrainCostCallback(Callback):
             epoch (int): index of current epoch
             minibatch (int): index of minibatch that is ending
         """
-        self.cost_history.append(model.cost.cost)
+        cost_buf = model.cost.cost
+        self.cost_history.append(cost_buf)
         mean_cost = sum(self.cost_history) / len(self.cost_history)
         mbstart = callback_data['time_markers/minibatch'][epoch - 1] if epoch > 0 else 0
 
@@ -702,7 +703,8 @@ class TrainMulticostCallback(Callback):
             epoch (int): index of current epoch
             minibatch (int): index of minibatch that is ending
         """
-        costs = np.array([c.cost for c in model.cost.costs])
+        cost_buf = model.cost.costs
+        costs = np.array([c.cost for c in cost_buf])
         self.cost_history.append(costs)
         mean_cost = sum(self.cost_history) / len(self.cost_history)
         mbstart = callback_data['time_markers/minibatch'][epoch-1] if epoch > 0 else 0
@@ -714,6 +716,21 @@ class TrainMulticostCallback(Callback):
         costs_allbranches = self.separate_branch_costs(costs_allbranches)
         callback_data['multicost/train_allbranches'][mbstart + minibatch, :] =\
             costs_allbranches.squeeze()
+
+        # ###TEST
+        # print("\n3 - COSTS in TrainMultiCostCallback:     Real/Fake: {}        Ep: {}          SUMEcal: {} ".format(costs[0][0, 0], costs[1][0, 0], costs[2][0, 0]))
+        # # progress_string = get_progress_string("Multicost Train", epoch, 0, 1,
+        # #                                       mean_cost, 0)
+        # # # clear the last line
+        # # sys.stdout.write('\r' + ' ' * self._last_strlen + '\r')
+        # # # print the new line
+        # # if PY3:
+        # #     sys.stdout.write(progress_string)
+        # # else:
+        # #     sys.stdout.write(progress_string.encode("utf-8"))
+        # # self._last_strlen = len(progress_string)
+        # # sys.stdout.flush()
+
 
     def multicost_recurse(self, x):
         """

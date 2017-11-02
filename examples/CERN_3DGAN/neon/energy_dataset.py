@@ -331,48 +331,39 @@ class my_gan_HDF5Iterator(ArrayIterator):
             my_buf = np.array(xdev[i1:i2, :]).astype(np.float32) # converting batch to numpy
             my_buf = np.moveaxis(my_buf, 0, -1) # moving batch axis at the end, keeping the x,y,z order (now X,Y,Z,N)
             mini_batch_in[:, :bsz] = my_buf.reshape((np.array(self.lshape)).prod(), bsz) #reshaping into 25*25*25xN
-            # transposing above does N,x,y,z into z,y,x,N
+            # just transposing above does N,x,y,z into z,y,x,N
 
             if self.be.bsz > bsz:
                 mini_batch_in[:, bsz:] = xdev[:(self.be.bsz - bsz), :].T.astype(np.float32)
+                raise (" self.be.bsz > bsz in energy_dataset")
 
-            # before pushing to device, could center and normalize here ... MISSING
+            # TODO before pushing to device, could center and normalize here ... MISSING
+            #removing non physical values
+            mini_batch_in[mini_batch_in < 1e-6] = 0
 
-            # push to device
+            # push input to device
             self.gen_input(mini_batch_in)
 
             if self.outbuf is not None:
                 mini_batch_out[:, :bsz] = self.out[i1:i2].T
 
                 #setting label values from hdf5 data file
-                # here mini_batch_out should have [0,:] = +/-11 for particle identification and [1,:] Ep
-                # we want to have Ep in [0,:] and SumE in [1,:]
-                sumE = np.sum(mini_batch_in, axis=(0))
-                mini_batch_out[0, :] = mini_batch_out[1, :] / 100.
+                # here currently mini_batch_out we should have [0,:] = +/-11 for particle identification and [1,:] = Ep
+                # we want to have Ep in [0,:], rescaled down by 100, and SumE in [1,:]
+                # this way numerically will hold the approximation: SUMEcal ~ 2 Ep,
+                # used when training discriminator on noise
+                sumE = np.sum(mini_batch_in, axis=(0,))
+                mini_batch_out[0, :] = mini_batch_out[1, :] / 100.0
                 mini_batch_out[1, :] = sumE
 
                 if self.be.bsz > bsz:
                     mini_batch_out[:, bsz:] = self.out[:(self.be.bsz - bsz)].T
+                    raise (" self.be.bsz > bsz in energy_dataset")
 
-                self.gen_output(mini_batch_out) #Energy rescaling as in temp3D_data above_
+                # push expected output(s) to device
+                self.gen_output(mini_batch_out)
 
             inputs = self.inpbuf
             targets = self.outbuf
             yield (inputs, targets)
 
-
-'''
-  File "/home/azanetti/CERN/neon/examples/CERN_3DGAN/neon/energy_gan.py", line 154, in <module>
-    main()
-  File "/home/azanetti/CERN/neon/examples/CERN_3DGAN/neon/energy_gan.py", line 136, in main
-    cost=cost, callbacks=callbacks)
-  File "/home/azanetti/CERN/neon/neon/models/model.py", line 183, in fit
-    self._epoch_fit(dataset, callbacks)
-  File "/home/azanetti/CERN/neon/examples/CERN_3DGAN/neon/my_gan_model.py", line 262, in _epoch_fit
-    for mb_idx, (x, labels) in enumerate(dataset):
-  File "/home/azanetti/CERN/neon/examples/CERN_3DGAN/neon/energy_dataset.py", line 339, in __iter__
-    mini_batch_in[:, bsz:] = xdev[:(self.be.bsz - bsz), :].T.astype(np.float32)
-ValueError: could not broadcast input array from shape (25,25,25,64) into shape (15625,64)
-Exception TypeError: 'super(type, obj): obj must be an instance or subtype of type' in <bound method my_gan_HDF5Iterator.__del__ of <energy_dataset.my_gan_HDF5Iterator object at 0x46fc110>> ignored
-Exception TypeError: 'super(type, obj): obj must be an instance or subtype of type' in <bound method my_gan_HDF5Iterator.__del__ of <energy_dataset.my_gan_HDF5Iterator object at 0x46eaf90>> ignored
-'''

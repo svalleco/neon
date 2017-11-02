@@ -13,7 +13,7 @@ from neon.util.persist import ensure_dirs_exist
 from neon.layers.layer import Dropout
 from neon.data.hdf5iterator import HDF5Iterator
 from neon.optimizers import GradientDescentMomentum, RMSProp, Adam
-from neon.optimizers.optimizer import get_param_list
+from neon.optimizers.optimizer import get_param_list, MultiOptimizer, Optimizer
 #from gen_data_norm import gen_rhs
 from neon.backends import gen_backend
 from neon.backends.backend import Block
@@ -26,7 +26,7 @@ from neon.util.persist import load_obj, save_obj
 import matplotlib.pyplot as plt
 import h5py
 from neon.data import ArrayIterator
-from my_gan_costs import RelativeCost
+from my_gan_costs_and_optimizer import RelativeCost, DummyOptimizer
 from my_gan_control import *
 
 import logging
@@ -114,7 +114,10 @@ def main():
 
     # setup optimizer
     learning_rate = my_gan_control_LR
-    optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
+    Adam_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
+    mapping = {'NotOptimizeLinear': DummyOptimizer(), 'default': Adam_optimizer}
+    optimizer = MultiOptimizer(mapping)
+    # optimizer = Adam_optimizer
 
     # setup cost functions
     if my_control_gan_Wasserstein:
@@ -133,8 +136,9 @@ def main():
     gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=1) #, wgan_param_clamp=0.9,wgan_train_sched=True) # try with k > 1 (=5)
 
     # configure callbacks
-    callbacks = Callbacks(gan, eval_set=valid_set)
-    callbacks.add_callback(TrainMulticostCallback())
+    #callbacks = Callbacks(gan, eval_set=valid_set)
+    callbacks = Callbacks(gan, output_file= res_dir + my_run_random_prefix + "callbacks_out_" + timestamp + '.h5')
+    callbacks.add_callback(TrainMulticostCallback()) # position in the list of callbacks can be specified here. Put 0?
 
     #training
     print 'starting training'
@@ -143,9 +147,6 @@ def main():
 
     # saving parameters using service function from myGan class has issues and temporarily using Model
     #gan.save_params('our_gan.prm')
-
-    import time
-    timestamp = time.strftime("%d-%m-%Y-%H-%M-%S")
 
     fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
     generator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + timestamp + '].prm'

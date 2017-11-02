@@ -53,7 +53,7 @@ def discriminator():
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, activation=lrelu)] #E primary
         branch3 = [b1,
-                   Linear(nout=1, init=Constant(val=1.0))] #SUM ECAL
+                   Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")] #SUM ECAL
     else:
 
         #setup weight initialization function
@@ -99,7 +99,7 @@ def discriminator():
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, activation=lrelu)]  # E primary
         branch3 = [b1,
-                   Linear(1, init=Constant(val=1.0))]  # SUM ECAL
+                   Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")]  # SUM ECAL
 
     if my_three_lines:
         D_layers = Tree([branch1, branch2, branch3], name="Discriminator", alphas=my_alpha)
@@ -112,7 +112,7 @@ def discriminator():
 def generator():
 
     if generator_option_1:
-        if my_xavier:
+        if my_xavier_gen:
             init_gen = Xavier()
         else:
             init_gen = Gaussian(scale=0.001)
@@ -143,7 +143,10 @@ def generator():
                    ]
     else:
         lrelu = Rectlin(slope=0.1)  # leaky relu
-        init_gen = Gaussian(scale=0.001)
+        if my_xavier_gen:
+            init_gen = Xavier()
+        else:
+            init_gen = Gaussian(scale=0.001)
         relu = Rectlin(slope=0)  # relu for generator
         # pad1 = dict(pad_h=2, pad_w=2, pad_d=2)
         pad1 = dict(pad_h=0, pad_w=0, pad_d=0)

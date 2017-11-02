@@ -23,6 +23,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 from neon.transforms.cost import Cost
+from neon.optimizers.optimizer import Optimizer
+
 
 
 class RelativeCost(Cost):
@@ -35,6 +37,10 @@ class RelativeCost(Cost):
         """
         Define the cost function and its gradient as lambda functions.
         """
-        self.func = lambda y, t: self.be.mean(self.be.absolute(self.be.divide(self.be.square(y - t), t), axis=0) / 2.)
-        self.funcgrad = lambda y, t: (y - t) /(t * y.shape[0])
+        self.func = lambda y, t: self.be.mean(self.be.absolute(self.be.divide((y - t), t)), axis=0) / 2.0
+        self.funcgrad = lambda y, t: (1.0 /(t * y.shape[0]))
 
+class DummyOptimizer(Optimizer):
+    def optimize(self, layer_list, epoch):
+
+        pass

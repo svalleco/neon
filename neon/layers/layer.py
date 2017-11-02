@@ -1284,7 +1284,7 @@ class Linear(ParameterLayer):
         Returns:
             Tensor: deltas to propagate to the adjacent lower layer
         """
-        if self.deltas: # here error is OpTreeNode in myGAN modeling
+        if self.deltas:
             self.be.compound_dot(A=self.W.T, B=error, C=self.deltas, alpha=alpha, beta=beta)
         self.be.compound_dot(A=error, B=self.inputs.T, C=self.dW)
         return self.deltas

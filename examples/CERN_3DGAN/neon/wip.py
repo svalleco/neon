@@ -24,7 +24,7 @@ examples/CERN_3DGAN/neon/__init__.py
 examples/CERN_3DGAN/neon/energy_dataset.py
 examples/CERN_3DGAN/neon/energy_gan.py
 examples/CERN_3DGAN/neon/my_gan_control.py
-examples/CERN_3DGAN/neon/my_gan_costs.py
+examples/CERN_3DGAN/neon/my_gan_costs_and_optimizer.py
 examples/CERN_3DGAN/neon/my_gan_hdf5_build.py
 examples/CERN_3DGAN/neon/my_gan_inference.py
 examples/CERN_3DGAN/neon/my_gan_layers.py
