@@ -125,8 +125,8 @@ def main():
     else:
         my_func = "modified"
     cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)), #wasserstein  / modified /original
-                            GeneralizedCost(costfunc=RelativeCost()),
-                            GeneralizedCost(costfunc=RelativeCost())])
+                            GeneralizedCost(costfunc=MeanSquared()),
+                            GeneralizedCost(costfunc=MeanSquared())])
     # cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
     #                         GeneralizedCost(costfunc=RelativeCost()),
     #                         GeneralizedCost(costfunc=RelativeCost())])

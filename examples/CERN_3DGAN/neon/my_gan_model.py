@@ -231,9 +231,11 @@ class myGAN(Model):
 
             if plot_matrix:
              plt.imshow(tens_to_pic)
+             plt.colorbar()
             else:
                 plt.plot(tens_to_pic)
-            plt.savefig(plt_filename + f_ending )
+
+            plt.savefig(plt_filename + f_ending)
             plt.close()
             print("PARTIAL IMAGE Gen_output {} was saved".format(plt_filename + f_ending))
 

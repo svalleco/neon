@@ -39,7 +39,7 @@ class RelativeCost(Cost):
         """
         self.func = lambda y, t: self.be.mean(self.be.absolute(self.be.divide((y - t), t)), axis=0)
         eps = 10e-8
-        self.funcgrad = lambda y, t: (1.0 /((t + eps) * y.shape[0]))
+        self.funcgrad = lambda y, t: (1.0 /((self.be.absolute(t) + eps) * y.shape[0])) #TBC: 1/|t| * (y-t)/|y-t|
 
 class DummyOptimizer(Optimizer):
 
