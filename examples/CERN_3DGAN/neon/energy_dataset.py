@@ -197,6 +197,8 @@ class my_gan_HDF5Iterator(ArrayIterator):
 
         self.inpbuf = None
         self.outbuf = None
+        self.inp_max = None
+        self.inp_mean = None
         self.allocated = False
 
     def allocate(self):
@@ -227,11 +229,14 @@ class my_gan_HDF5Iterator(ArrayIterator):
         pr = np.array(pr)
         pr = pr.prod()
         self.inpbuf = self.be.iobuf(pr)
+        self.inp_max = self.be.iobuf((1,))
+        self.inp_mean = self.be.iobuf((1,))
 
         # setup host buffer for a mini_batch
         self.mini_batch_in = np.zeros(self.inpbuf.shape)
 
         self.mean = None
+        self.mb_max = None
         # the 'mean' dataset is the the mean values to subtract
         if 'mean' in self.hdf_file:
             mns_ = np.array(self.hdf_file['mean']).flatten()
@@ -261,7 +266,7 @@ class my_gan_HDF5Iterator(ArrayIterator):
             self.outbuf = self.be.iobuf(self.out.shape[1])
             self.mini_batch_out = np.zeros(self.outbuf.shape)
 
-    def gen_input(self, mini_batch):
+    def gen_input(self, mini_batch, mb_max, mb_mean):
         """
         Function to handle any preprocessing before pushing an input
         mini-batch to the device.  For example, mean subtraction etc.
@@ -271,6 +276,8 @@ class my_gan_HDF5Iterator(ArrayIterator):
                                   input vector size and N is the batch size
         """
         self.inpbuf[:] = mini_batch
+        self.inp_max[:] = mb_max
+        self.inp_mean[:] = mb_mean
         # mean subtract
         if self.mean is not None:
             self.meansub_view[:] = -self.mean + self.meansub_view
@@ -337,12 +344,15 @@ class my_gan_HDF5Iterator(ArrayIterator):
                 mini_batch_in[:, bsz:] = xdev[:(self.be.bsz - bsz), :].T.astype(np.float32)
                 raise (" self.be.bsz > bsz in energy_dataset")
 
-            # TODO before pushing to device, could center and normalize here ... MISSING
+            # TODO: review this preparation, should be done on device...
             #removing non physical values
             mini_batch_in[mini_batch_in < 1e-6] = 0
+            mb_mean = np.mean(mini_batch_in) #use self.be here?
+            mb_max = np.max(mini_batch_in) #all values are poisitive
+            mini_batch_in[:] = (mini_batch_in - mb_mean)/ mb_max #rescaling into [-1,1] as it will compare with tanh output from generator
 
             # push input to device
-            self.gen_input(mini_batch_in)
+            self.gen_input(mini_batch_in, mb_max, mb_mean)#passing original mean and max for SUMEcal estimation when training on noise
 
             if self.outbuf is not None:
                 mini_batch_out[:, :bsz] = self.out[i1:i2].T
@@ -351,7 +361,9 @@ class my_gan_HDF5Iterator(ArrayIterator):
                 # here currently mini_batch_out we should have [0,:] = +/-11 for particle identification and [1,:] = Ep
                 # we want to have Ep in [0,:], rescaled down by 100, and SumE in [1,:]
                 # this way numerically will hold the approximation: SUMEcal ~ 2 Ep,
-                # used when training discriminator on noise
+                # used when training discriminator on noise. But we also need to take into account
+                # that we use tanh at the generator, so rescaling of the input affects how we compute the estimate
+                # of the SUMEcal when training on noise
                 sumE = np.sum(mini_batch_in, axis=(0,))
                 mini_batch_out[0, :] = mini_batch_out[1, :] / 100.0
                 mini_batch_out[1, :] = sumE
@@ -365,5 +377,8 @@ class my_gan_HDF5Iterator(ArrayIterator):
 
             inputs = self.inpbuf
             targets = self.outbuf
-            yield (inputs, targets)
+            mini_batch_max = self.inp_max
+            mini_batch_mean = self.inp_mean
+
+            yield (inputs, targets, mini_batch_max, mini_batch_mean)
 

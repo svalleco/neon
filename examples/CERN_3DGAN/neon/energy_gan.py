@@ -82,7 +82,7 @@ def main():
 
     # grab one iteration from the train_set
     iterator = train_set.__iter__()
-    (X, Y) = iterator.next()
+    (X, Y, _, _) = iterator.next()
     print("printing X and Y")
     print X
     print Y

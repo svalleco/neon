@@ -259,7 +259,7 @@ class myGAN(Model):
         z, y_temp = self.zbuf, self.ybuf
 
         # iterate through minibatches of the dataset
-        for mb_idx, (x, labels) in enumerate(dataset):
+        for mb_idx, (x, labels, mb_max, mb_mean) in enumerate(dataset):
             callbacks.on_minibatch_begin(epoch, mb_idx)
             self.be.begin(Block.minibatch, mb_idx)
 
@@ -271,6 +271,9 @@ class myGAN(Model):
             #Resetting Ep and SUMEcal costs at the start of the minibatch
             self.cost_dis_Ep[:] = 0
             self.cost_dis_SUMEcal[:] = 0
+
+            # print("example of numpy sum of data from dataset:\n")
+            # print(np.sum(x.get()[:], axis=(1,)))
 
             ######################## 1 - TRAIN DISCRIMINATOR ON NOISE
             print("\n\nSTART MINIBATCH {0}\n---> training the discriminator on Noise for the {0}-th time".format(self.current_batch))
@@ -294,6 +297,9 @@ class myGAN(Model):
             y_noise_Ep = y_noise_list[1]#getting Particle Energy estimation done by discr
             y_noise_SUMEcal = y_noise_list[2]#getting Total Energy on Cal estimation done by discr
 
+            # print("example of MODEL sum of data from dataset:\n")
+            # print(y_noise_SUMEcal.get())
+
             # buffering some values used later
             y_temp[:] = y_noise# Real/Fake discr output on noise
             t = myEnergies[0, :]# Ep inputs used to condition the noise input
@@ -310,15 +316,18 @@ class myGAN(Model):
             # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
             delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
-            delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, 2 * t)
+            tp = (2 * t - mb_mean * Gz[0].shape[0])/ mb_max
+            tpval = self.be.empty((1,128))  # allocate space for output
+            tpval[:] = tp  # execute the op-tree
+            #print(tpval.get())
+            delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, tpval)
 
             # reminder: how to execute OpTreeNodes:
             # Then, f is an op - tree(neon.backends.backend.OpTreeNode).We
             # execute the op - tree
             # by calling the proper syntax.
             #
-            # fval = be.empty((10, 10))  # allocate space for output
-            # fval[:] = f  # execute the op-tree
+
 
             # computing gradient contributions from all three output lines, for discriminator weights
             if my_three_lines:
@@ -412,7 +421,11 @@ class myGAN(Model):
                     # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
                     delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
                     delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
-                    delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, 2 * t)
+                    tp = (2 * t - mb_mean * Gz[0].shape[0])/mb_max
+                    tpval = self.be.empty((1, 128))  # allocate space for output
+                    tpval[:] = tp  # execute the op-tree
+                    # print(tpval.get())
+                    delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, tpval)
 
                     # discriminator backprop: computing gradient contributions from all three output lines, for discriminator weights
                     if my_three_lines:
@@ -441,8 +454,8 @@ class myGAN(Model):
                               (self.cost_dis[0], self.cost_dis_Ep[0], self.cost_dis_SUMEcal[0], self.cost_gen[0]))
                     # print("\nEstimated SUM")
                     # print(y_noise_SUMEcal.get())
-                    # print("\nOne sample of generated Image values")
-                    # print(Gz[0].get()[:, 0])
+                    # print("\nNumpy sum from generator output tensor")
+                    # print(np.sum(Gz[0].get(), axis=(0,)))
 
                 # accumulate total cost.
                 self.total_cost[:] = self.total_cost + self.cost_dis

@@ -5,7 +5,7 @@ import time
 res_dir = "results/"
 my_debug = True
 my_three_lines = True
-my_alpha = (15, 2, 0.1)
+my_alpha = (6, 2, 1)
 my_alpha_balanced = (1, 1, 1) # 0 multiplier in my_gan_model will apply in this case (my_three_lines = True) on lines other than real/fake
 my_gan_lshape = (1, 25, 25, 25)
 my_use_hdf5_iterator = True
