@@ -115,7 +115,7 @@ def generator():
         if my_xavier_gen:
             init_gen = Xavier()
         else:
-            init_gen = Gaussian(scale=0.001)
+            init_gen = Gaussian(scale=my_gaussian_scale_init_for_generator)
         lrelu = Rectlin(slope=0.1)  # leaky relu
         relu = Rectlin(slope=0)  # relu for generator
         pad1 = dict(pad_h=2, pad_w=2, pad_d=2)
@@ -146,7 +146,7 @@ def generator():
         if my_xavier_gen:
             init_gen = Xavier()
         else:
-            init_gen = Gaussian(scale=0.001)
+            init_gen = Gaussian(scale=my_gaussian_scale_init_for_generator)
         relu = Rectlin(slope=0)  # relu for generator
         # pad1 = dict(pad_h=2, pad_w=2, pad_d=2)
         pad1 = dict(pad_h=0, pad_w=0, pad_d=0)

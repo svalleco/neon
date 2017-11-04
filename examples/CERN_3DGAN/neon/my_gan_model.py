@@ -213,9 +213,9 @@ class myGAN(Model):
         # filenames
         fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
         plfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + timestamp + \
-                  '_[' + 'batch_n_{}'.format(self.current_batch) + ']'
+                  'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + ']'
         h5fname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + timestamp + \
-                  '_[' + 'batch_n_{}'.format(self.current_batch) + '].h5'
+                  'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].h5'
         plt_filename = os.path.join(fdir, plfname)
         h5_filename = os.path.join(fdir, h5fname)
 
@@ -227,7 +227,6 @@ class myGAN(Model):
             plt.figure()
             plt.title("Ep_r:{0:.2f} R/F:{1:.2f} Ep_e:{2:.2f} Ecal_e:{3:.2f}".format\
                           (cond_labels[0,0], prob_fake_real[0,0], Ep_estimated[0,0], SUMEcal_estimated[0,0]))
-
 
             if plot_matrix:
              plt.imshow(tens_to_pic)
@@ -317,17 +316,10 @@ class myGAN(Model):
             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
             delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
             tp = (2 * t - mb_mean * Gz[0].shape[0])/ mb_max
-            tpval = self.be.empty((1,128))  # allocate space for output
+            tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
             tpval[:] = tp  # execute the op-tree
             #print(tpval.get())
             delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, tpval)
-
-            # reminder: how to execute OpTreeNodes:
-            # Then, f is an op - tree(neon.backends.backend.OpTreeNode).We
-            # execute the op - tree
-            # by calling the proper syntax.
-            #
-
 
             # computing gradient contributions from all three output lines, for discriminator weights
             if my_three_lines:
@@ -381,7 +373,7 @@ class myGAN(Model):
             if my_compute_all_costs:
                 self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_data_Ep[0], labels[0, :][0])
                 self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_data_SUMEcal[0], labels[1, :][0])
-                print("1 - MODEL: END OF DISCRMINATOR TRAINING: COSTS: Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}".format\
+                print("MODEL: END OF DISCRMINATOR TRAINING: COSTS: Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}".format\
                           (self.cost_dis[0], self.cost_dis_Ep[0], self.cost_dis_SUMEcal[0]))
                 # TODO: why computing generator cost affect the cost displayed...
                 # TODO: ...by the ProgressBar callback, actually written by TrainCostCallback?
@@ -422,9 +414,9 @@ class myGAN(Model):
                     delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
                     delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
                     tp = (2 * t - mb_mean * Gz[0].shape[0])/mb_max
-                    tpval = self.be.empty((1, 128))  # allocate space for output
+                    tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
                     tpval[:] = tp  # execute the op-tree
-                    # print(tpval.get())
+                    #print(tpval.get())
                     delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, tpval)
 
                     # discriminator backprop: computing gradient contributions from all three output lines, for discriminator weights
@@ -448,14 +440,14 @@ class myGAN(Model):
                 self.cost_dis[:] = self.cost.costs[0].get_cost(y_temp, y_noise, cost_type='dis')
                 if my_compute_all_costs:
                     self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_noise_Ep[0], t)
-                    self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_noise_SUMEcal[0], 2 * t)
+                    self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_noise_SUMEcal[0], tpval)
                     self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_noise, cost_type='gen')
                     print("MODEL: END OF GENERATOR TRAINING: COSTS: Discr. Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}  Generator cost: {}".format\
                               (self.cost_dis[0], self.cost_dis_Ep[0], self.cost_dis_SUMEcal[0], self.cost_gen[0]))
-                    # print("\nEstimated SUM")
+                    # print("\nEstimated SUM \n")
                     # print(y_noise_SUMEcal.get())
-                    # print("\nNumpy sum from generator output tensor")
-                    # print(np.sum(Gz[0].get(), axis=(0,)))
+                    # print("\ntpval")
+                    # print(tpval.get())
 
                 # accumulate total cost.
                 self.total_cost[:] = self.total_cost + self.cost_dis
@@ -463,7 +455,7 @@ class myGAN(Model):
                 self.gen_iter += 1
 
             #adding temporary saving of plots and hdf5 data
-            if self.current_batch % 50 == 0:
+            if self.current_batch % data_saving_freq == 0:
                 # last output of the generator from the backend object (tested with GPU)
                 gen_output = Gz[0].get()
                 self.plot_partials_generations(gen_output, t.get(), y_noise.get(), y_noise_Ep.get(), y_noise_SUMEcal.get())
