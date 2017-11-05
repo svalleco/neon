@@ -315,10 +315,15 @@ class myGAN(Model):
             # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
             delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
-            tp = (2 * t - mb_mean * Gz[0].shape[0])/ mb_max
-            tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
-            tpval[:] = tp  # execute the op-tree
-            #print(tpval.get())
+
+            if data_normalization:
+                tp = (2 * t - mb_mean * Gz[0].shape[0])/ mb_max
+                tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
+                tpval[:] = tp  # execute the op-tree
+                #print(tpval.get)
+            else:
+                tpval = 2 * t
+
             delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, tpval)
 
             # computing gradient contributions from all three output lines, for discriminator weights
@@ -413,10 +418,14 @@ class myGAN(Model):
                     # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
                     delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
                     delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
-                    tp = (2 * t - mb_mean * Gz[0].shape[0])/mb_max
-                    tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
-                    tpval[:] = tp  # execute the op-tree
-                    #print(tpval.get())
+
+                    if data_normalization:
+                        tp = (2 * t - mb_mean * Gz[0].shape[0])/mb_max
+                        tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
+                        tpval[:] = tp  # execute the op-tree
+                        #print(tpval.get())
+                    else:
+                        tpval = 2 * t
                     delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, tpval)
 
                     # discriminator backprop: computing gradient contributions from all three output lines, for discriminator weights
