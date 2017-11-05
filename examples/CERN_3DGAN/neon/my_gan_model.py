@@ -275,7 +275,7 @@ class myGAN(Model):
             # print(np.sum(x.get()[:], axis=(1,)))
 
             ######################## 1 - TRAIN DISCRIMINATOR ON NOISE
-            print("\n\nSTART MINIBATCH {0}\n---> training the discriminator on Noise for the {0}-th time".format(self.current_batch))
+            print("\n\n RUN ID: " + my_run_random_prefix + "   START MINIBATCH {0}\n---> training the discriminator on Noise for the {0}-th time".format(self.current_batch))
             myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
 
             if my_debug:
