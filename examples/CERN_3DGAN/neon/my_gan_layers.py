@@ -17,7 +17,7 @@ def discriminator():
         else:
             init = Gaussian(scale=0.01)
 
-        if my_control_gan_Wasserstein:
+        if my_control_cost_function == "Wasserstein":
             Top_Layer = Linear(nout=1, init=init)
         else:
             Top_Layer = Affine(nout=1, init=init, bias=init, activation=Logistic())
@@ -62,7 +62,7 @@ def discriminator():
         else:
             init = Gaussian(scale=0.01)
 
-        if my_control_gan_Wasserstein:
+        if my_control_cost_function == "Wasserstein":
             Top_Layer = Linear(nout=1, init=init)
         else:
             Top_Layer = Affine(nout=1, init=init, bias=init, activation=Logistic())

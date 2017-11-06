@@ -396,7 +396,7 @@ class myGAN(Model):
                 self.layers.generator.set_acc_on(True)
 
                 # generator cab trained more times before go back to discr training
-                ntimes_train_gen = 2 if (my_three_lines and not my_control_gan_Wasserstein) else 1
+                ntimes_train_gen = 2 if (my_three_lines and not my_control_cost_function == "Wasserstein") else 1
 
                 for i in range(ntimes_train_gen):
 

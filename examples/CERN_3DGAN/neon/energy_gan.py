@@ -31,10 +31,12 @@ from my_gan_control import *
 
 import logging
 
-def print_figure(my_tensor, filename):
+def print_figure(my_tensor, filename, Ep):
     plt.figure()
+    plt.title("Ep:{0:.2f}".format(Ep))
     if plot_matrix:
         plt.imshow(my_tensor)
+        plt.colorbar()
     else:
         plt.plot(my_tensor)
     plt.savefig(res_dir + my_run_random_prefix + filename)
@@ -92,10 +94,13 @@ def main():
     # plotting out some pictures from the database
     filename_list = ['example_from_train_set_img_0_xz.png', 'example_from_train_set_img_0_xy.png', 'example_from_train_set_img_0_yz.png']
     tt = X.get()
+    yy = Y.get()
+    in_batch = np.random.randint(0, batch_size)
+    lyr = np.random.randint(0, 25)
     tt = tt.reshape(25, 25, 25, batch_size)
-    tensor_to_print = [tt[:, 12, :, 0], tt[:, :, 12, 0], tt[12, :, :, 0]]
+    tensor_to_print = [tt[:, lyr, :, in_batch], tt[:, :, lyr, in_batch], tt[lyr, :, :, in_batch]]
     for i in range(3):
-        print_figure(tensor_to_print[i], filename_list[i])
+        print_figure(tensor_to_print[i], filename_list[i], yy[1, in_batch])
 
     # resetting train_set
     train_set.reset()
@@ -114,22 +119,36 @@ def main():
 
     # setup optimizer
     learning_rate = my_gan_control_LR
-    Adam_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
-    mapping = {'NotOptimizeLinear': DummyOptimizer(), 'default': Adam_optimizer}
+    if my_gan_control_optimizer == "Adam":
+        my_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
+    elif my_gan_control_optimizer == "RMSProp":
+        my_optimizer = RMSProp() #learning_rate=learning_rate)
+    else:
+        my_optimizer = GradientDescentMomentum(learning_rate=learning_rate, momentum_coef=0.9, gradient_clip_value = 5)
+
+    print("Optimizer in use is: {}".format(my_optimizer.get_description()))
+    mapping = {'NotOptimizeLinear': DummyOptimizer(), 'default': my_optimizer}
     optimizer = MultiOptimizer(mapping)
-    # optimizer = Adam_optimizer
 
     # setup cost functions
-    if my_control_gan_Wasserstein:
+    if my_control_cost_function == "Wasserstein":
         my_func = "wasserstein"
-    else:
+    elif my_control_cost_function == "Modified":
         my_func = "modified"
-    cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)), #wasserstein  / modified /original
+    else:
+        my_func = "original"
+
+    if my_gan_control_relative_vs_meansquared == "MeanSquared":
+        cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)), #wasserstein / modified /original
                             GeneralizedCost(costfunc=MeanSquared()),
                             GeneralizedCost(costfunc=MeanSquared())])
-    # cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func="wasserstein")),
-    #                         GeneralizedCost(costfunc=RelativeCost()),
-    #                         GeneralizedCost(costfunc=RelativeCost())])
+        print("Using MeanSquared cost function for Auxiliary Classifiers")
+
+    else: #RelativeCost
+        cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)),  # wasserstein / modified /original
+                                GeneralizedCost(costfunc=RelativeCost()),
+                                GeneralizedCost(costfunc=RelativeCost())])
+        print("Using RelativeCost cost function for Auxiliary Classifiers")
 
     # initialize model
     noise_dim = (latent_size,)
