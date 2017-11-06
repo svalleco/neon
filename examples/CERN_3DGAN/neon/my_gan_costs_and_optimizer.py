@@ -30,7 +30,7 @@ from neon.optimizers.optimizer import Optimizer
 class RelativeCost(Cost):
 
     """
-    Average Relative Absolute Error cost function. Computes :math:`\\frac{1}{N}\\sum_i (y_i-t_i)/t_i`.
+    Average Relative Absolute Error cost function. Computes :math:`\\frac{1}{N}\\abs (sum_i (y_i-t_i)/t_i)`.
     """
 
     def __init__(self):
@@ -39,7 +39,7 @@ class RelativeCost(Cost):
         """
         eps = 10e-8 # to prevent inf: but are we worried about this?
         self.func = lambda y, t: self.be.mean(self.be.absolute(self.be.divide((y - t), t)), axis=0)
-        self.funcgrad = lambda y, t: (1.0 /t * y.shape[0]) * self.be.divide((y-t), self.be.absolute(y-t)) # 1/N *1/t * sgn(y-t): sgn: ---->(y-t)/|y-t|
+        self.funcgrad = lambda y, t: (1.0 /self.be.absolute(t) * y.shape[0]) * self.be.divide((y-t), self.be.absolute(y-t)) # 1/N *1/|t| * sgn(y-t): sgn: ---->(y-t)/|y-t|
 
 
 class DummyOptimizer(Optimizer):

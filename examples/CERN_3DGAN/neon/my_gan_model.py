@@ -225,7 +225,7 @@ class myGAN(Model):
         file_name_endings = ["_xz", "_xy", "_yz"]
         for num_pics, tens_to_pic, f_ending in zip([0, 1, 2], my_views, file_name_endings  ):
             plt.figure()
-            plt.title("Ep_r:{0:.2f} R/F:{1:.2f} Ep_e:{2:.2f} Ecal_e:{3:.2f}".format\
+            plt.title("Ep_r:{0:.2f} R/F:{1:.2f} Ep_e:{2:.2f} Ecal_e:{3:.2f}\n".format\
                           (cond_labels[0,0], prob_fake_real[0,0], Ep_estimated[0,0], SUMEcal_estimated[0,0]))
 
             if plot_matrix:
@@ -355,6 +355,13 @@ class myGAN(Model):
             delta_data = self.cost.costs[0].costfunc.bprop_data(y_data)
             delta_data_Ep = self.cost.costs[1].costfunc.bprop(y_data_Ep, labels[0, :])
             delta_data_SUMEcal = self.cost.costs[2].costfunc.bprop(y_data_SUMEcal, labels[1, :])
+            # print("Ep estimated by the network:")
+            # print(y_data_Ep.get())
+            # print("Ep from dataset:")
+            # print(labels[0,:].get())
+            # print("Ep generated randomly:")
+            # print(t.get())
+
 
             # computing gradient contributions from all three output lines, for discriminator weights
             if my_three_lines:

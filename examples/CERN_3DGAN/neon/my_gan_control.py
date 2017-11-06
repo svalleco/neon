@@ -6,7 +6,7 @@ from shutil import copyfile, copy2
 # control parameters of my_gan
 my_debug = True
 my_three_lines = True
-my_alpha = (12, 2, 0.5)
+my_alpha = (20, 5, 0.1)
 my_alpha_balanced = (1, 1, 1) # 0 multiplier in my_gan_model will apply in this case (my_three_lines = True) on lines other than real/fake
 my_gan_lshape = (1, 25, 25, 25)
 my_use_hdf5_iterator = True
@@ -19,13 +19,13 @@ my_xavier_gen = False
 my_gan_control_batch_size = 128
 my_gan_control_nb_epochs = 30
 my_gan_control_latent_size = 256
-my_gan_control_LR = 2e-3
+my_gan_control_LR = 1e-4
 my_compute_all_costs = True
 data_saving_freq = 100
 my_gaussian_scale_init_for_generator = 0.001
 data_normalization = False
 my_gan_control_relative_vs_meansquared = "RelativeCost" #RelativeCost vs MeanSquared
-my_gan_control_optimizer = "GradientDesc" # Adam; anything else will set to GradientDescent
+my_gan_control_optimizer = "Adam" # Adam; RMSProp or anything else will set to GradientDescent
 
 my_control_cost_function = "Modified" #  Wasserstein, Modified, Original
 # with Wasserstein on cost displayed is 0.0000000;
