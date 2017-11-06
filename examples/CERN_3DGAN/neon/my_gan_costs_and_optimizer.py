@@ -37,9 +37,9 @@ class RelativeCost(Cost):
         """
         Define the cost function and its gradient as lambda functions.
         """
-        eps = 10e-8 # to prevent inf: but are we worried about this?
-        self.func = lambda y, t: self.be.mean(self.be.absolute(self.be.divide((y - t), t)), axis=0)
-        self.funcgrad = lambda y, t: (1.0 /self.be.absolute(t) * y.shape[0]) * self.be.divide((y-t), self.be.absolute(y-t)) # 1/N *1/|t| * sgn(y-t): sgn: ---->(y-t)/|y-t|
+        eps = 10e-8 # to prevent inf
+        self.func = lambda y, t: self.be.mean(self.be.absolute(self.be.divide((y - t), self.be.absolute(t) + eps)), axis=0)
+        self.funcgrad = lambda y, t: self.be.multiply(self.be.multiply(self.be.absolute(self.be.reciprocal(t)) + eps, y.shape[0]), self.be.sgn(y-t))# 1/N *1/|t| * sgn(y-t): sgn: ---->(y-t)/|y-t|
 
 
 class DummyOptimizer(Optimizer):
