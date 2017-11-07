@@ -6,7 +6,7 @@ from shutil import copyfile, copy2
 # control parameters of my_gan
 my_debug = True
 my_three_lines = True
-my_alpha = (20, 5, 0.1)
+my_alpha = (6, 2, 0.1)
 my_alpha_balanced = (1, 1, 1) # 0 multiplier in my_gan_model will apply in this case (my_three_lines = True) on lines other than real/fake
 my_gan_lshape = (1, 25, 25, 25)
 my_use_hdf5_iterator = True
@@ -14,21 +14,23 @@ generator_option_1 = False
 discriminator_option_1 = True
 save_training_progress = False
 plot_matrix = True
-my_xavier = False # with True will lead to NANs in discriminator fake/real output. Why?
+my_xavier_discr = False # with True will lead to NANs in discriminator fake/real output. Why?
 my_xavier_gen = False
 my_gan_control_batch_size = 128
 my_gan_control_nb_epochs = 30
 my_gan_control_latent_size = 256
-my_gan_control_LR = 1e-4
+my_gan_control_LR = 1e-4 #not use for RMSProp
 my_compute_all_costs = True
-data_saving_freq = 100
+my_gan_control_param_clamp = None
+data_saving_freq = 20
 my_gaussian_scale_init_for_generator = 0.001
+my_gaussian_scale_init_for_discriminator = 0.01
 data_normalization = False
 my_gan_control_relative_vs_meansquared = "RelativeCost" #RelativeCost vs MeanSquared
 my_gan_control_optimizer = "Adam" # Adam; RMSProp or anything else will set to GradientDescent
 
-my_control_cost_function = "Modified" #  Wasserstein, Modified, Original
-# with Wasserstein on cost displayed is 0.0000000;
+my_control_cost_function = "Original" #  Wasserstein, Modified, Original
+# with Wasserstein on cost displayed is weird and bouncing from negative to positive; review gradient clipping;
 # check why it is so small and learning does not happen.
 # Maybe TopLayer is not correct or other tweaks must be enabled by this flag
 # TODO indeed: also wgan_param_clamp must be enabled by this set to Wasserstein

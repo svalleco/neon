@@ -95,6 +95,7 @@ def main():
     filename_list = ['example_from_train_set_img_0_xz.png', 'example_from_train_set_img_0_xy.png', 'example_from_train_set_img_0_yz.png']
     tt = X.get()
     yy = Y.get()
+    yy[ yy < 1e-6 ] = 0#removing non physical values
     in_batch = np.random.randint(0, batch_size)
     lyr = np.random.randint(0, 25)
     tt = tt.reshape(25, 25, 25, batch_size)
@@ -152,7 +153,7 @@ def main():
 
     # initialize model
     noise_dim = (latent_size,)
-    gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=1) #, wgan_param_clamp=0.9,wgan_train_sched=True) # try with k > 1 (=5)
+    gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=1, wgan_param_clamp=my_gan_control_param_clamp) #, wgan_param_clamp=0.9,wgan_train_sched=True) # try with k > 1 (=5)
 
     # configure callbacks
     #callbacks = Callbacks(gan, eval_set=valid_set)
