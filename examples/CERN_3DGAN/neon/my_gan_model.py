@@ -476,6 +476,28 @@ class myGAN(Model):
                 gen_output = Gz[0].get()
                 self.plot_partials_generations(gen_output, t.get(), y_noise.get(), y_noise_Ep.get(), y_noise_SUMEcal.get())
 
+                #saving params
+                fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
+                genfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + \
+                          'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].prm'
+
+                discfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + \
+                          'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].prm'
+                gen_filename = os.path.join(fdir, genfname)
+                disc_filename = os.path.join(fdir, discfname)
+
+                fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
+                generator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[
+                    0] + "-generator-" + timestamp + '].prm'
+                discriminator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[
+                    0] + "-discriminator-" + timestamp + '].prm'
+
+                my_generator = Model(self.layers.generator)
+                my_generator.save_params(gen_filename)
+                # my_discriminator = Model(self.layers.discriminator)
+                # my_discriminator.save_params(disc_filename)
+                print("Saved prm files for generator and :\nGen--> {}\nDisc--> {}".format(gen_filename, disc_filename))
+
             self.be.end(Block.minibatch, mb_idx)
             callbacks.on_minibatch_end(epoch, mb_idx)
             self.current_batch += 1

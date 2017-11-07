@@ -23,6 +23,7 @@ from sklearn.model_selection import train_test_split
 from neon.util.persist import load_obj, save_obj
 import h5py
 from neon.data import ArrayIterator
+from my_gan_control import *
 
 from neon.models.model import Model
 from neon.backends import gen_backend
@@ -33,22 +34,28 @@ import h5py
 from my_gan_layers import generator
 
 # backend generation and batch size setting
-gen_backend(backend='gpu', batch_size=64)
+gen_backend(backend='gpu', batch_size=my_gan_control_batch_size)
 
 latent_size = 256
 my_generator = Model(generator())
-my_generator.load_params('our_gen.prm') #update this name with the name of the new results dir!!!
+#choose the file from the batch you want to investigate
+# 3795296_my_gan_model-generator-Epoch 0_[batch_n_80].prm
+generator_filename = '/home/azanetti/CERN/neon/examples/CERN_3DGAN/neon/results_08-11-2017-00-21_3795296_/3795296_my_gan_model-generator-Epoch 0_[batch_n_80].prm'
+my_generator.load_params(generator_filename)
+inf_prefix = os.path.basename(generator_filename)
 
 # inference test
 #gan.fill_noise(inference_set)
-x_new = np.random.randn(100, latent_size)
+x_new = np.random.randn(my_gan_control_batch_size, my_gan_control_latent_size)
 inference_set = ArrayIterator(X=x_new, make_onehot=False)
+
+#submit the noise sample to the generator
 test = my_generator.get_outputs(inference_set) # this invokes the model class method that has been modified for this. Find better way.
-test = test.reshape((100, 25, 25, 25))
+test = test.reshape((my_gan_control_batch_size, 25, 25, 25))
 print(test.shape, 'generator output')
 plt.plot(test[0, :, 12, :])
 my_dir = "inference_results/"
-plt.savefig(my_dir + 'output_img.png')
+plt.savefig(my_dir + inf_prefix + '_inference_out.png')
 h5f = h5py.File(my_dir + 'output_data.h5', 'w')
 h5f.create_dataset('dataset_1', data=test)
 print(" files were saved in {}  \n".format(my_dir))

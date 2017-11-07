@@ -126,7 +126,7 @@ def generator():
         conv2 = dict(init=init_gen, batch_norm=False, activation=lrelu, padding=pad2, strides=str2, bias=init_gen)
         pad3 = dict(pad_h=0, pad_w=0, pad_d=0)
         str3 = dict(str_h=1, str_w=1, str_d=1)
-        conv3 = dict(init=init_gen, batch_norm=False, activation=Rectlin(), padding=pad3, strides=str3, bias=init_gen)
+        conv3 = dict(init=init_gen, batch_norm=False, activation=Tanh(), padding=pad3, strides=str3, bias=init_gen) # Rectlin()
         bg = BranchNode("bg")
         branchg  = [bg,
                     Affine(1024, init=init_gen, bias=init_gen, activation=relu),
@@ -164,7 +164,7 @@ def generator():
         pad4 = dict(pad_h=0, pad_w=0, pad_d=0)
         str4 = dict(str_h=1, str_w=1, str_d=1)
         conv4 = dict(init=init_gen, batch_norm=False, activation=lrelu, padding=pad4, strides=str4, bias=init_gen)
-        conv5 = dict(init=init_gen, batch_norm=False, activation=Rectlin(), padding=pad4, strides=str4, bias=init_gen)
+        conv5 = dict(init=init_gen, batch_norm=False, activation=Tanh(), padding=pad4, strides=str4, bias=init_gen) # Rectlin()
         bg = BranchNode("bg")
         branchg = [bg,
                    # Affine(1024, init=init_gen, bias=init_gen, activation=relu),

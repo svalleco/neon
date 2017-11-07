@@ -25,7 +25,7 @@ my_gan_control_param_clamp = None
 data_saving_freq = 20
 my_gaussian_scale_init_for_generator = 0.001
 my_gaussian_scale_init_for_discriminator = 0.01
-data_normalization = False
+data_normalization = True
 my_gan_control_relative_vs_meansquared = "RelativeCost" #RelativeCost vs MeanSquared
 my_gan_control_optimizer = "Adam" # Adam; RMSProp or anything else will set to GradientDescent
 
