@@ -486,12 +486,6 @@ class myGAN(Model):
                 gen_filename = os.path.join(fdir, genfname)
                 disc_filename = os.path.join(fdir, discfname)
 
-                fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
-                generator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[
-                    0] + "-generator-" + timestamp + '].prm'
-                discriminator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[
-                    0] + "-discriminator-" + timestamp + '].prm'
-
                 my_generator = Model(self.layers.generator)
                 my_generator.save_params(gen_filename)
                 # my_discriminator = Model(self.layers.discriminator)

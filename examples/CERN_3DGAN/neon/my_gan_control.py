@@ -22,7 +22,7 @@ my_gan_control_latent_size = 256
 my_gan_control_LR = 1e-4 #not use for RMSProp
 my_compute_all_costs = True
 my_gan_control_param_clamp = None
-data_saving_freq = 20
+data_saving_freq = 200
 my_gaussian_scale_init_for_generator = 0.001
 my_gaussian_scale_init_for_discriminator = 0.01
 data_normalization = True
@@ -35,23 +35,29 @@ my_control_cost_function = "Original" #  Wasserstein, Modified, Original
 # Maybe TopLayer is not correct or other tweaks must be enabled by this flag
 # TODO indeed: also wgan_param_clamp must be enabled by this set to Wasserstein
 
-my_run_random_prefix = str(int(np.random.randint(1,10000000, 1))) + "_"
-print("################## SIMULATION PREFIX FOR OUTPUT IDENTIFICATION IS: {} ####################".format(my_run_random_prefix))
-timestamp = time.strftime("%d-%m-%Y-%H-%M")
 
-res_dir = "results_{}_{}/".format(timestamp, my_run_random_prefix)
+inference_only = True #CHANGE IT accordingly!
 
-try:
-    os.makedirs(res_dir)
-    print("Created directory {}".format(res_dir))
-except OSError as e:
-    if e.errno != errno.EEXIST:
-        raise
+# settings for inference only
+if inference_only:
+    my_inference_dir = "inference_results/"
+else:
+    # settings for training
+    my_run_random_prefix = str(int(np.random.randint(1,10000000, 1))) + "_"
+    print("################## SIMULATION PREFIX FOR OUTPUT IDENTIFICATION IS: {} ####################".format(my_run_random_prefix))
+    timestamp = time.strftime("%d-%m-%Y-%H-%M")
+    res_dir = "results_{}_{}/".format(timestamp, my_run_random_prefix)
+    try:
+        os.makedirs(res_dir)
+        print("Created directory {}".format(res_dir))
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
 
-#copy this file into results dir as to track how they were obtained
-this_file_name = "my_gan_control.py" #os.path.basename(__file__)
-destination_file_name = res_dir + this_file_name
-copyfile(this_file_name, destination_file_name )
+    #copy this file into results dir as to track how they were obtained
+    this_file_name = "my_gan_control.py" #os.path.basename(__file__)
+    destination_file_name = res_dir + this_file_name
+    copyfile(this_file_name, destination_file_name )
 
 
 '''

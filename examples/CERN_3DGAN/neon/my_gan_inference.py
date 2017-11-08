@@ -36,29 +36,53 @@ from my_gan_layers import generator
 # backend generation and batch size setting
 gen_backend(backend='gpu', batch_size=my_gan_control_batch_size)
 
-latent_size = 256
+#create a model out of the generator definition
 my_generator = Model(generator())
+
 #choose the file from the batch you want to investigate
-# 3795296_my_gan_model-generator-Epoch 0_[batch_n_80].prm
-generator_filename = '/home/azanetti/CERN/neon/examples/CERN_3DGAN/neon/results_08-11-2017-00-21_3795296_/3795296_my_gan_model-generator-Epoch 0_[batch_n_80].prm'
+generator_filename = '/home/azanetti/goto_CERN_model/results_08-11-2017-00-43_5899196_/5899196_my_gan_model-generator-Epoch 12_[batch_n_18800].prm'
 my_generator.load_params(generator_filename)
+
+# set the prefix for interference output
 inf_prefix = os.path.basename(generator_filename)
 
 # inference test
-#gan.fill_noise(inference_set)
-x_new = np.random.randn(my_gan_control_batch_size, my_gan_control_latent_size)
+#generating input Ep energies, as in fill_noise_sampledE in our GAN model
+maxE = 5
+minE = 0
+myEnergies = np.random.rand(my_gan_control_batch_size) * (maxE - minE) + minE
+
+# random noise with the same distribution used during training
+rand_noise = np.random.normal(0, 1, (my_gan_control_batch_size, my_gan_control_latent_size))
+
+# input vector to the generator
+x_new = np.zeros((my_gan_control_batch_size, my_gan_control_latent_size))
+for i in range(0, my_gan_control_batch_size):
+    x_new[i, :] = rand_noise[i, :] * myEnergies[i]
+
+#input iterator to pass to get_outputs
 inference_set = ArrayIterator(X=x_new, make_onehot=False)
 
-#submit the noise sample to the generator
-test = my_generator.get_outputs(inference_set) # this invokes the model class method that has been modified for this. Find better way.
-test = test.reshape((my_gan_control_batch_size, 25, 25, 25))
-print(test.shape, 'generator output')
-plt.plot(test[0, :, 12, :])
-my_dir = "inference_results/"
-plt.savefig(my_dir + inf_prefix + '_inference_out.png')
-h5f = h5py.File(my_dir + 'output_data.h5', 'w')
-h5f.create_dataset('dataset_1', data=test)
-print(" files were saved in {}  \n".format(my_dir))
+#submit the noise sample to the generator and get output
+gen_out = my_generator.get_outputs(inference_set) # (batch, 15625) this invokes the model class method that has been modified for this. Find better way.
+gen_out = gen_out.reshape((my_gan_control_batch_size, 25, 25, 25))
+
+file_name_endings = ["_xz", "_xy", "_yz"]
+for b_ind in range(0, my_gan_control_batch_size):
+    my_views = [gen_out[b_ind, :, 12, :], gen_out[b_ind, :, :, 12], gen_out[b_ind, 12, :, :]] # 12 to cut the cube in the center where it is supposed to show more energy
+    for num_pics, tens_to_pic, f_ending in zip([0, 1, 2], my_views, file_name_endings):
+        plt.figure()
+        plt.title("Ep submitted for inference:{0:.2f} section{1}\n".format(myEnergies[b_ind], f_ending))
+        plt.imshow(tens_to_pic)
+        plt.colorbar()
+        plt.savefig(my_inference_dir + inf_prefix + '_batch_ind_{}_inference_out'.format(b_ind) + f_ending + '.png')
+        plt.close()
+
+print(gen_out.shape, 'generator output files saved to dir {} with prefix: {}'.format(my_inference_dir, inf_prefix))
+
+h5f = h5py.File(my_inference_dir + 'output_data.h5', 'w')
+h5f.create_dataset('dataset_1', data=gen_out)
+print(" files were saved in {}  \n".format(my_inference_dir))
 
 # #test
 # import os
