@@ -271,11 +271,16 @@ class myGAN(Model):
             self.cost_dis_Ep[:] = 0
             self.cost_dis_SUMEcal[:] = 0
 
-            # print("example of numpy sum of data from dataset:\n")
-            # print(np.sum(x.get()[:], axis=(1,)))
-
             ######################## 1 - TRAIN DISCRIMINATOR ON NOISE
             print("\n\n RUN ID: " + my_run_random_prefix + "   START MINIBATCH {0}\n---> training the discriminator on Noise for the {0}-th time".format(self.current_batch))
+
+            if my_gan_control_print_tensor_examples: #VERIFIED TO BE CORRECT
+                print("1 - TRAIN DISCRIMINATOR ON NOISE: example of numpy sum of data from dataset: np.sum(x.get()[:], axis=(1,))\n")
+                temsum = np.sum(x.get()[:], axis=(0,))
+                print(temsum)
+                print("\n1 - TRAIN DISCRIMINATOR ON NOISE: example of numpy sum of data from dataset: (labels[1, :].get())")
+                print(labels[1, :].get())
+
             myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
 
             if my_debug:
@@ -296,8 +301,11 @@ class myGAN(Model):
             y_noise_Ep = y_noise_list[1]#getting Particle Energy estimation done by discr
             y_noise_SUMEcal = y_noise_list[2]#getting Total Energy on Cal estimation done by discr
 
-            # print("example of MODEL sum of data from dataset:\n")
-            # print(y_noise_SUMEcal.get())
+            if my_gan_control_print_tensor_examples:
+                print("1 - TRAIN DISCRIMINATOR ON NOISE: example of SUMECal of generated images (so from noise):\n")
+                print(y_noise_SUMEcal.get())
+                print("1 - TRAIN DISCRIMINATOR ON NOISE: example of EP of generated images (so from noise):\n")
+                print(y_noise_Ep.get())
 
             # buffering some values used later
             y_temp[:] = y_noise# Real/Fake discr output on noise
@@ -316,11 +324,13 @@ class myGAN(Model):
             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
             delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
 
-            if data_normalization:
-                tp = (2 * t - mb_mean * Gz[0].shape[0])/ mb_max
+            if data_normalization == "for_tanh_output":
+                tp = (2 * t - mb_mean * Gz[0].shape[0]) / mb_max
                 tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
                 tpval[:] = tp  # execute the op-tree
-                #print(tpval.get)
+                # print(tpval.get())
+            elif data_normalization == "for_logistic_output":
+                tpval = 2 * t / mb_max
             else:
                 tpval = 2 * t
 
@@ -355,12 +365,14 @@ class myGAN(Model):
             delta_data = self.cost.costs[0].costfunc.bprop_data(y_data)
             delta_data_Ep = self.cost.costs[1].costfunc.bprop(y_data_Ep, labels[0, :])
             delta_data_SUMEcal = self.cost.costs[2].costfunc.bprop(y_data_SUMEcal, labels[1, :])
-            # print("Ep estimated by the network:")
-            # print(y_data_Ep.get())
-            # print("Ep from dataset:")
-            # print(labels[0,:].get())
-            # print("Ep generated randomly:")
-            # print(t.get())
+
+            if my_gan_control_print_tensor_examples:
+                print("2 - TRAIN DISCRIMINATOR ON DATA: Ep estimated by the network:")
+                print(y_data_Ep.get())
+                print("2 - TRAIN DISCRIMINATOR ON DATA: Ep from dataset:")
+                print(labels[0,:].get())
+                print("2 - TRAIN DISCRIMINATOR ON DATA: Ep generated randomly:")
+                print(t.get())
 
 
             # computing gradient contributions from all three output lines, for discriminator weights
@@ -378,10 +390,13 @@ class myGAN(Model):
             # keep GAN cost values for the current minibatch
             # abuses get_cost(y,t) using y_noise as the "target"
             self.cost_dis[:] = self.cost.costs[0].get_cost(y_data, y_temp, cost_type='dis')
-            # print("SUMEcal Esimated\n")
-            # print(y_data_SUMEcal.get())
-            # print("SUMEcal from the data minibatch\n")
-            # print(labels[1, :].get())
+
+            if my_gan_control_print_tensor_examples:
+                print("2 - TRAIN DISCRIMINATOR ON DATA: SUMEcal Esimated\n")
+                print(y_data_SUMEcal.get())
+                print("2 - TRAIN DISCRIMINATOR ON DATA: SUMEcal from the data minibatch\n")
+                print(labels[1, :].get())
+
             if my_compute_all_costs:
                 self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_data_Ep[0], labels[0, :][0])
                 self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_data_SUMEcal[0], labels[1, :][0])
@@ -426,13 +441,16 @@ class myGAN(Model):
                     delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
                     delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
 
-                    if data_normalization:
+                    if data_normalization == "for_tanh_output":
                         tp = (2 * t - mb_mean * Gz[0].shape[0])/mb_max
                         tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
                         tpval[:] = tp  # execute the op-tree
                         #print(tpval.get())
+                    elif data_normalization == "for_logistic_output":
+                        tpval = 2 * t / mb_max
                     else:
                         tpval = 2 * t
+
                     delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, tpval)
 
                     # discriminator backprop: computing gradient contributions from all three output lines, for discriminator weights
@@ -460,15 +478,20 @@ class myGAN(Model):
                     self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_noise, cost_type='gen')
                     print("MODEL: END OF GENERATOR TRAINING: COSTS: Discr. Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}  Generator cost: {}".format\
                               (self.cost_dis[0], self.cost_dis_Ep[0], self.cost_dis_SUMEcal[0], self.cost_gen[0]))
-                    # print("\nEstimated SUM \n")
-                    # print(y_noise_SUMEcal.get())
-                    # print("\ntpval")
-                    # print(tpval.get())
+
+                    if my_gan_control_print_tensor_examples:
+                        print("\n3 - TRAIN GENERATOR: Estimated SUM \n")
+                        print(y_noise_SUMEcal.get())
+                        print("\n3 - TRAIN GENERATOR: tpval")
+                        tpvall = self.be.empty((1, self.be.bsz))  # allocate space for output
+                        tpvall[:] = tpval  # execute the op-tree
+                        print(tpvall.get())
 
                 # accumulate total cost.
                 self.total_cost[:] = self.total_cost + self.cost_dis
                 self.last_gen_batch = self.current_batch
                 self.gen_iter += 1
+
 
             #adding temporary saving of plots and hdf5 data
             if self.current_batch % data_saving_freq == 0:

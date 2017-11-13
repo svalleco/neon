@@ -101,7 +101,7 @@ def main():
     tt = tt.reshape(25, 25, 25, batch_size)
     tensor_to_print = [tt[:, lyr, :, in_batch], tt[:, :, lyr, in_batch], tt[lyr, :, :, in_batch]]
     for i in range(3):
-        print_figure(tensor_to_print[i], filename_list[i], yy[1, in_batch])
+        print_figure(tensor_to_print[i], filename_list[i], yy[0, in_batch])
 
     # resetting train_set
     train_set.reset()
@@ -114,7 +114,7 @@ def main():
     if my_debug:
         print my_disc_layers
         print my_gen_layers
-        print("Generator option 1 is: {}".format(generator_option_1))
+        print("Generator option is: {}".format(generator_option))
         print 'layers defined'
         print layers
 
@@ -126,7 +126,6 @@ def main():
         my_optimizer = RMSProp() #learning_rate=learning_rate)
     else:
         my_optimizer = GradientDescentMomentum(learning_rate=learning_rate, momentum_coef=0.9, gradient_clip_value = 5)
-
     print("Optimizer in use is: {}".format(my_optimizer.get_description()))
     mapping = {'NotOptimizeLinear': DummyOptimizer(), 'default': my_optimizer}
     optimizer = MultiOptimizer(mapping)
@@ -138,16 +137,14 @@ def main():
         my_func = "modified"
     else:
         my_func = "original"
-
     if my_gan_control_relative_vs_meansquared == "MeanSquared":
         cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)), #wasserstein / modified /original
                             GeneralizedCost(costfunc=MeanSquared()),
                             GeneralizedCost(costfunc=MeanSquared())])
         print("Using MeanSquared cost function for Auxiliary Classifiers")
-
     else: #RelativeCost
         cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)),  # wasserstein / modified /original
-                                GeneralizedCost(costfunc=RelativeCost()),
+                                GeneralizedCost(costfunc=RelativeCost()), #RelativeCost
                                 GeneralizedCost(costfunc=RelativeCost())])
         print("Using RelativeCost cost function for Auxiliary Classifiers")
 

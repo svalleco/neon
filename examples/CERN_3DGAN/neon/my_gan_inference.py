@@ -40,7 +40,11 @@ gen_backend(backend='gpu', batch_size=my_gan_control_batch_size)
 my_generator = Model(generator())
 
 #choose the file from the batch you want to investigate
-generator_filename = '/home/azanetti/goto_CERN_model/results_08-11-2017-00-43_5899196_/5899196_my_gan_model-generator-Epoch 12_[batch_n_18800].prm'
+#generator_filename = '/home/azanetti/goto_CERN_model/results_08-11-2017-00-43_5899196_/5899196_my_gan_model-generator-Epoch 12_[batch_n_18800].prm'
+#generator_filename = '/home/azanetti/goto_CERN_model/results_08-11-2017-00-43_5899196_/5899196_my_gan_model-generator-Epoch 12_[batch_n_19600].prm'
+generator_filename = '/home/azanetti/goto_CERN_model/results_08-11-2017-00-43_5899196_/5899196_my_gan_model-generator-Epoch 12_[batch_n_19800].prm'
+
+
 my_generator.load_params(generator_filename)
 
 # set the prefix for interference output

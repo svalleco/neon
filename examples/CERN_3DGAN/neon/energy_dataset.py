@@ -348,12 +348,16 @@ class my_gan_HDF5Iterator(ArrayIterator):
             #removing non physical values
             mini_batch_in[mini_batch_in < 1e-6] = 0
 
-            if data_normalization:
-                mb_mean = np.mean(mini_batch_in) #use self.be here?
-                mb_max = np.max(mini_batch_in) #all values are poisitive
-                mini_batch_in[:] = (mini_batch_in - mb_mean)/ mb_max #rescaling into [-1,1] as it will compare with tanh output from generator
+            mb_mean = np.mean(mini_batch_in)  # use self.be here?
+            mb_max = np.max(mini_batch_in)  # all values are poisitive
+
+            if data_normalization == "for_tanh_output":
+                mini_batch_in[:] = (mini_batch_in - mb_mean)/ mb_max #rescaling into [-1,1] as it will compare with tanh output from generator Tanh
+            elif data_normalization == "for_logistic_output":
+                mb_mean = 0.0
+                mini_batch_in[:] = mini_batch_in / mb_max #rescaling into [0,1] as it will compare with tanh output from generator Logistic
             else:
-                mb_mean = mb_max = 0.0
+                 mb_mean = mb_max = 0.0
 
             # push input to device
             self.gen_input(mini_batch_in, mb_max, mb_mean)#passing original mean and max for SUMEcal estimation when training on noise

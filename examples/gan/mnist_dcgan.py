@@ -51,13 +51,13 @@ conv = dict(init=init, batch_norm=True, activation=relu)
 convp1 = dict(init=init, batch_norm=True, activation=relu, padding=1)
 convp2 = dict(init=init, batch_norm=True, activation=relu, padding=2)
 convp1s2 = dict(init=init, batch_norm=True, activation=relu, padding=1, strides=2)
-G_layers = [Deconv((1, 1, 16), name="G11", **conv),
-            Deconv((3, 3, 192), name="G12", **convp1),
-            Deconv((3, 3, 192), name="G21", **convp1s2),
-            Deconv((3, 3, 192), name="G22", **convp1),
-            Deconv((3, 3, 96), name="G31", **convp1s2),
-            Deconv((3, 3, 96), name="G32", **conv),
-            Deconv((3, 3, 1), name="G_out",
+G_layers = [Deconv((1, 1, 16), name="G11", **conv), #inshape: 2,7,7 outshape: 16,7,7
+            Deconv((3, 3, 192), name="G12", **convp1), #outshape: 192,7,7
+            Deconv((3, 3, 192), name="G21", **convp1s2), #outshape: 192,13,13
+            Deconv((3, 3, 192), name="G22", **convp1), #outshape: 192,13,13
+            Deconv((3, 3, 96), name="G31", **convp1s2), #outshape: 96,25,25
+            Deconv((3, 3, 96), name="G32", **conv), #outshape: 96,27,27
+            Deconv((3, 3, 1), name="G_out", #outshape: 1,27,27
                    init=init, batch_norm=False, padding=1,
                    activation=Logistic(shortcut=False))]
 
