@@ -13,7 +13,7 @@ save_training_progress = False
 
 #data mng
 my_use_hdf5_iterator = True
-data_saving_freq = 100
+data_saving_freq = 20
 
 #Initializations
 my_xavier_discr = False # with True will lead to NANs in discriminator fake/real output. Why?
@@ -27,11 +27,11 @@ my_gan_control_nb_epochs = 30
 my_gan_control_latent_size = 256
 
 #optimizer and cost function
-my_gan_control_LR = 5e-5 #not use for RMSProp
+my_gan_control_LR = 1e-4 #not use for RMSProp
 my_gan_control_param_clamp = None
 my_gan_control_relative_vs_meansquared = "MeanSquared" #RelativeCost vs MeanSquared
-my_gan_control_optimizer = "Adam" # Adam; RMSProp or anything else will set to GradientDescent
-my_control_cost_function = "Original" #  Wasserstein, Modified, Original
+my_gan_control_optimizer = "Adam" # Adam; RMSProp; anything else it will set to GradientDescent
+my_control_cost_function = "Modified" #  Wasserstein, Modified, Original
 # with Wasserstein on cost displayed is weird and bouncing from negative to positive; review gradient clipping;
 # check why it is so small and learning does not happen.
 # Maybe TopLayer is not correct or other tweaks must be enabled by this flag
@@ -39,15 +39,13 @@ my_control_cost_function = "Original" #  Wasserstein, Modified, Original
 
 #model configuration
 my_three_lines = True
-my_alpha = (6, 2, 1)
+my_alpha = (60, 1, 1)
 my_alpha_balanced = (1, 1, 1) # 0 multiplier in my_gan_model will apply in this case (my_three_lines = True) on lines other than real/fake
 my_gan_lshape = (1, 25, 25, 25)
-generator_option = 3 # 1 original ,2 = Sofia's 2nd version ,3 = all convolution
-discriminator_option = 2
+generator_option = 2 # 1 original ,2 = Sofia's 2nd version ,3 = all convolution
+discriminator_option = 1
 # NB this below requires manually setting of gen output layer accordingly
-data_normalization = "for_tanh_output" # "for_tanh_output" "for_logistic_output" or else or nothing for relu (as output layer of generator)
-
-
+data_normalization = "no"# """for_tanh_output" # "for_tanh_output" "for_logistic_output"; else or nothing for relu (as output layer of generator)
 
 
 inference_only = False #CHANGE IT accordingly!

@@ -725,11 +725,11 @@ class GANCost(Cost):
             OpTree: discriminator or generator cost, controlled by cost_type
         """
         assert y_data.shape == y_noise.shape, "Noise and data output shape mismatch"
-        if self.func == 'original':
+        if self.func == 'modified':
             cost_dis_data = -self.be.safelog(y_data)
             cost_dis_noise = -self.be.safelog(1-y_noise)
             cost_gen = -self.be.safelog(y_noise)
-        elif self.func == 'modified':
+        elif self.func == 'original': # this is original, but in Neon 2.2 was called modified, and viceversa
             cost_dis_data = -self.be.safelog(y_data)
             cost_dis_noise = -self.be.safelog(1-y_noise)
             cost_gen = self.be.safelog(1-y_noise)
