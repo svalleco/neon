@@ -27,7 +27,7 @@ my_gan_control_nb_epochs = 30
 my_gan_control_latent_size = 256
 
 #optimizer and cost function
-my_gan_control_LR = 1e-4 #not use for RMSProp
+my_gan_control_LR = 2e-4 #not use for RMSProp
 my_gan_control_param_clamp = None
 my_gan_control_relative_vs_meansquared = "MeanSquared" #RelativeCost vs MeanSquared
 my_gan_control_optimizer = "Adam" # Adam; RMSProp; anything else it will set to GradientDescent
@@ -39,13 +39,13 @@ my_control_cost_function = "Modified" #  Wasserstein, Modified, Original
 
 #model configuration
 my_three_lines = True
-my_alpha = (60, 1, 1)
+my_alpha = (30, 2, 1)
 my_alpha_balanced = (1, 1, 1) # 0 multiplier in my_gan_model will apply in this case (my_three_lines = True) on lines other than real/fake
 my_gan_lshape = (1, 25, 25, 25)
 generator_option = 2 # 1 original ,2 = Sofia's 2nd version ,3 = all convolution
 discriminator_option = 1
 # NB this below requires manually setting of gen output layer accordingly
-data_normalization = "no"# """for_tanh_output" # "for_tanh_output" "for_logistic_output"; else or nothing for relu (as output layer of generator)
+data_normalization = "for_tanh_output"# """for_tanh_output" # "for_tanh_output" "for_logistic_output"; else or nothing for relu (as output layer of generator)
 
 
 inference_only = False #CHANGE IT accordingly!
