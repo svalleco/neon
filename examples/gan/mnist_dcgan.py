@@ -61,7 +61,7 @@ G_layers = [Deconv((1, 1, 16), name="G11", **conv), #inshape: 2,7,7 outshape: 16
                    init=init, batch_norm=False, padding=1,
                    activation=Logistic(shortcut=False))]
 
-# discriminiator using convolution layers
+# discriminator using convolution layers
 lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
 conv = dict(init=init, batch_norm=True, activation=lrelu)
 convp1 = dict(init=init, batch_norm=True, activation=lrelu, padding=1)

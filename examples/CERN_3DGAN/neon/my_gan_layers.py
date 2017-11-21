@@ -1,7 +1,7 @@
 from neon.initializers import Gaussian, Constant, Xavier
 from neon.layers import GeneralizedGANCost, Affine, Linear, Sequential, Conv, Deconv, Dropout, Pooling, BatchNorm, BranchNode, GeneralizedCost
 from neon.layers.layer import Linear, Reshape
-from neon.layers.container import Tree, Multicost, LayerContainer, GenerativeAdversarial
+from neon.layers.container import Tree, SingleOutputTree, Multicost, LayerContainer, GenerativeAdversarial
 from neon.transforms import Rectlin, Logistic, GANCost, Tanh, MeanSquared, Identity
 from neon.layers.layer import Dropout
 from my_gan_control import *
@@ -17,9 +17,9 @@ def discriminator():
         init = Gaussian(scale=my_gaussian_scale_init_for_discriminator)
 
     if my_control_cost_function == "Wasserstein":
-        Top_Layer = Linear(nout=1, init=init)
+        Top_Layer = Linear(nout=1, name="Discriminator", init=init)
     else:
-        Top_Layer = Affine(nout=1, init=init, bias=init, activation=Logistic())
+        Top_Layer = Affine(nout=1, name="Discriminator", init=init, bias=init, activation=Logistic(shortcut=False))
 
     if discriminator_option == 1:
         # discriminator using convolution layers
@@ -31,30 +31,31 @@ def discriminator():
         b1 = BranchNode("b1")
         b2 = BranchNode("b2")
         branch1 = [b1,
-                    Conv((5, 5, 5, 32), **conv1),
+                    Conv((5, 5, 5, 32), name="Discriminator", **conv1), #21x21x21
                     Dropout(keep = 0.8),
-                    Conv((5, 5, 5, 8), **conv2),
+                    Conv((5, 5, 5, 8), name="Discriminator", **conv2), #21x21x21
                     BatchNorm(),
                     Dropout(keep = 0.8),
-                    Conv((5, 5, 5, 8), **conv2),
+                    Conv((5, 5, 5, 8), name="Discriminator",  **conv2), #21x21x21
                     BatchNorm(),
                     Dropout(keep = 0.8),
-                    Conv((5, 5, 5, 8), **conv3),
+                    Conv((5, 5, 5, 8), name="Discriminator", **conv3), #19x19x19
                     BatchNorm(),
                     Dropout(keep = 0.8),
                     Pooling((2, 2, 2)),
-                    Affine(1024, init=init, activation=lrelu),
+                    Affine(1024, init=init, name="Discriminator", activation=lrelu),
                     BatchNorm(),
-                    Affine(1024, init=init, activation=lrelu),
+                    Affine(1024, init=init, name="Discriminator", activation=lrelu),
                     BatchNorm(),
                     b2,
-                    Top_Layer #   Affine(nout=1, init=init, bias=init, activation=Logistic()) # for non-Wasserstein Identity() per Wasserstein?
+                    Top_Layer
                     ] #real/fake
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, activation=lrelu)] #E primary
         branch3 = [b1,
                    Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")] #SUM ECAL
-    else: #discriminator_option == 2
+
+    elif discriminator_option == 2:
         lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
         # sigmoid = Logistic() # sigmoid activation function
         conv1 = dict(init=init, batch_norm=False, activation=lrelu, bias=init)
@@ -63,15 +64,15 @@ def discriminator():
         b1 = BranchNode("b1")
         b2 = BranchNode("b2")
         branch1 = [b1,
-                   Conv((5, 5, 5, 32), **conv1),
+                   Conv((5, 5, 5, 32), name="Discriminator",  **conv1),
                    Dropout(keep=0.8),
-                   Conv((5, 5, 5, 8), **conv2),
+                   Conv((5, 5, 5, 8), name="Discriminator", **conv2),
                    BatchNorm(),
                    Dropout(keep=0.8),
-                   Conv((5, 5, 5, 8), **conv2),
+                   Conv((5, 5, 5, 8), name="Discriminator", **conv2),
                    BatchNorm(),
                    Dropout(keep=0.8),
-                   Conv((5, 5, 5, 8), **conv3),
+                   Conv((5, 5, 5, 8), name="Discriminator", **conv3),
                    BatchNorm(),
                    Dropout(keep=0.8),
                    Pooling((2, 2, 2)),
@@ -80,20 +81,70 @@ def discriminator():
                    # Affine(1024, init=init, activation=lrelu),
                    # BatchNorm(),
                    b2,
-                   Top_Layer #Affine(nout=1, init=init, bias=init, activation=Logistic())
-                   # for non-Wasserstein Identity()/Linear() per Wasserstein
+                   Top_Layer
                    ]  # real/fake
         branch2 = [b2,
-                   Affine(nout=1, init=init, bias=init, activation=lrelu)]  # E primary
+                   Affine(nout=1, init=init, bias=init, name="Discriminator",  activation=lrelu)]  # E primary
+        branch3 = [b1,
+                   Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")]  # SUM ECAL
+
+    else:#discriminiator using convolution layers
+        if my_control_cost_function == "Wasserstein":
+            Top_Layer = Conv((4, 4, 4), name="Discriminator",
+                         init=init, batch_norm=False,
+                         activation=Linear(nout=1, init=init))
+        else:
+            Top_Layer = Conv((4, 4, 4, 1), name="Discriminator",
+                         init=init, batch_norm=False,
+                         activation=Logistic(shortcut=False))
+
+        pad_hwd_111 = dict(pad_h=1, pad_w=1, pad_d=1)
+        str_hwd_222 = dict(str_h=2, str_w=2, str_d=2)
+        lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
+        convp1_l1 = dict(init=init, batch_norm=False, activation=lrelu, padding=pad_hwd_111)
+        convp1 = dict(init=init, batch_norm=True, activation=lrelu, padding=pad_hwd_111)
+        convp1s2 = dict(init=init, batch_norm=True, activation=lrelu, padding=pad_hwd_111, strides=str_hwd_222)
+        conv = dict(init=init, batch_norm=True, activation=lrelu)
+        b1 = BranchNode("b1")
+        b2 = BranchNode("b2")
+        branch1 = [b1,
+                    Conv((3, 3, 3, 96), name="Discriminator", **convp1_l1), #outshape 25x25x25
+                    Dropout(keep=0.8),
+
+                    Conv((3, 3, 3, 96), name="Discriminator", **convp1s2), #outshape 13x13x13
+                    Dropout(keep=0.8),
+
+                    Conv((3, 3, 3, 192), name="Discriminator", **convp1), #outshape 13x13x13
+                    Dropout(keep=0.8),
+
+                    Conv((3, 3, 3, 192), name="Discriminator", **convp1s2), # outshape 7x7x7
+                    Dropout(keep=0.8),
+
+                    Conv((3, 3, 3, 96), name="Discriminator", **convp1), # outshape 7x7x7
+                    Dropout(keep=0.8),
+
+                   Conv((3, 3, 3, 96), name="Discriminator", **convp1s2),  # outshape 4x4x4
+                   Dropout(keep=0.8),
+
+                    b2,
+
+                    Conv((1, 1, 1, 16), name="Discriminator", **conv), # outshape 4x4x4
+                    Top_Layer
+                   ]
+
+        branch2 = [b2,
+                   Affine(nout=1, init=init, bias=init, name="Discriminator", activation=lrelu)]  # E primary
         branch3 = [b1,
                    Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")]  # SUM ECAL
 
     if my_three_lines:
-        D_layers = Tree([branch1, branch2, branch3], name="Discriminator", alphas=my_alpha)
+        D_layers = SingleOutputTree([branch1, branch2, branch3], alphas=my_alpha)
         print("Using Three lines with alpha = {}".format(my_alpha))
     else:
-        D_layers = Tree([branch1, branch2, branch3], name="Discriminator", alphas=my_alpha_balanced)
+        D_layers = Tree([branch1, branch2, branch3], alphas=my_alpha_balanced)
     return D_layers
+
+
 
 
 def generator():
@@ -129,6 +180,7 @@ def generator():
                     BatchNorm(),
                     Conv((3, 3, 3, 1), **conv3)
                    ]
+
     elif generator_option == 2:
         relu = Rectlin(slope=0)  # relu for generator
         # pad1 = dict(pad_h=2, pad_w=2, pad_d=2)
@@ -164,6 +216,7 @@ def generator():
                    Conv((4, 4, 6, 8), **conv4),
                    Conv((2, 2, 10, 1), **conv5)
                    ]
+
     else: #generator_option == 3
         # generator using "decovolution" layers
         pad_hwd_111 = dict(pad_h=1, pad_w=1, pad_d=1)
@@ -186,25 +239,6 @@ def generator():
                           init=init_gen, batch_norm=True, padding=pad_hwd_111,
                           activation=Tanh())] #Logistic(shortcut=False))]
 
-    G_layers = Tree([branchg], name="Generator_andrea")
+    G_layers = Tree([branchg], name="Generator")
     return G_layers
 
-
-def discriminator_andrea(): #Todo: do it!
-    #Todo:
-    # setup weight initialization function
-    init = Gaussian(scale=0.05)
-    # discriminiator using convolution layers
-    lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
-    conv = dict(init=init, batch_norm=True, activation=lrelu)
-    convp1 = dict(init=init, batch_norm=True, activation=lrelu, padding=1)
-    convp1s2 = dict(init=init, batch_norm=True, activation=lrelu, padding=1, strides=2)
-    D_layers = [Conv((3, 3, 96), name="D11", **convp1),
-                Conv((3, 3, 96), name="D12", **convp1s2),
-                Conv((3, 3, 192), name="D21", **convp1),
-                Conv((3, 3, 192), name="D22", **convp1s2),
-                Conv((3, 3, 192), name="D31", **convp1),
-                Conv((1, 1, 16), name="D32", **conv),
-                Conv((7, 7, 1), name="D_out",
-                     init=init, batch_norm=False,
-                     activation=Logistic(shortcut=False))]

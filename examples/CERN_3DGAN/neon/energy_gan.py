@@ -118,16 +118,28 @@ def main():
         print 'layers defined'
         print layers
 
-    # setup optimizer
-    learning_rate = my_gan_control_LR
-    if my_gan_control_optimizer == "Adam":
-        my_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
-    elif my_gan_control_optimizer == "RMSProp":
-        my_optimizer = RMSProp() #learning_rate=learning_rate)
+    # setup optimizer for generator:
+    learning_rate = my_gan_control_LR_generator
+    if my_gan_control_generator_optimizer == "Adam":
+        my_gen_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
+    elif my_gan_control_generator_optimizer == "RMSProp":
+        my_gen_optimizer = RMSProp() #learning_rate=learning_rate)
     else:
-        my_optimizer = GradientDescentMomentum(learning_rate=learning_rate, momentum_coef=0.9, gradient_clip_value = 5)
-    print("Optimizer in use is: {}".format(my_optimizer.get_description()))
-    mapping = {'NotOptimizeLinear': DummyOptimizer(), 'default': my_optimizer}
+        my_gen_optimizer = GradientDescentMomentum(learning_rate=learning_rate, momentum_coef=0.9, gradient_clip_value = 5)
+    print("Optimizer in use for Generator is: {}".format(my_gen_optimizer.get_description()))
+
+    #setup optimizer for discriminator
+    learning_rate = my_gan_control_LR_discriminator
+    if my_gan_control_discriminator_optimizer == "Adam":
+        my_discr_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
+    elif my_gan_control_discriminator_optimizer == "RMSProp":
+        my_discr_optimizer = RMSProp()  # learning_rate=learning_rate)
+    else:
+        my_discr_optimizer = GradientDescentMomentum(learning_rate=learning_rate, momentum_coef=0.9, gradient_clip_value=5)
+    print("Optimizer in use for Discriminator is: {}".format(my_discr_optimizer.get_description()))
+
+    # optimizer mapping to layers
+    mapping = {'NotOptimizeLinear': DummyOptimizer(), 'Discriminator': my_discr_optimizer, 'default': my_gen_optimizer}
     optimizer = MultiOptimizer(mapping)
 
     # setup cost functions
@@ -150,7 +162,7 @@ def main():
 
     # initialize model
     noise_dim = (latent_size,)
-    gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=1, wgan_param_clamp=my_gan_control_param_clamp) #, wgan_param_clamp=0.9,wgan_train_sched=True) # try with k > 1 (=5)
+    gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=my_gan_k, wgan_param_clamp=my_gan_control_param_clamp) #, wgan_param_clamp=0.9,wgan_train_sched=True) # try with k > 1 (=5)
 
     # configure callbacks
     #callbacks = Callbacks(gan, eval_set=valid_set)
