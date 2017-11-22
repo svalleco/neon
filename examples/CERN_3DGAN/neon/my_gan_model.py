@@ -42,10 +42,10 @@ main_logger.setLevel(10)
 class myGenerativeAdversarial(GenerativeAdversarial): # LayerContainer):
     """
     Container for Generative Adversarial Net (GAN). It contains the Generator
-    and Discriminator stacks as sequential containers.
+    and Discriminator stacks as tree containers.
 
     Arguments:
-        layers (list): A list containing two Sequential containers
+        layers (list): A list containing two tree containers
     """
     def __init__(self, generator, discriminator, name=None):
         super(LayerContainer, self).__init__(name)
@@ -181,13 +181,19 @@ class myGAN(Model):
 
         # Now allocate space
         self.layers.generator.allocate(accumulate_updates=False)
-        self.layers.discriminator.allocate(accumulate_updates=False)
+        self.layers.discriminator.allocate(accumulate_updates=True)
         self.layers.allocate_deltas(None)
         self.initialized = True
+
+        self.y_out = self.be.iobuf((1,)) #realfake
+        self.y_Ep = self.be.iobuf((1,))  # Particle Energy
+        self.y_SUMEcal = self.be.iobuf((1,))  # Total Energy on Cal
+
         self.zbuf = self.be.iobuf(self.noise_dim)
         self.ybuf = self.be.iobuf((1,))
         self.z0 = self.be.iobuf(self.noise_dim)  # a fixed noise buffer for generating images
         self.fill_noise_sampledE(self.z0, normal=(self.noise_type == 'normal'))
+
         #buffers for costs
         self.cost_dis = np.empty((1,), dtype=np.float32)
         self.cost_dis_Ep = np.empty((1,), dtype=np.float32) #TODO review--------------
@@ -254,6 +260,10 @@ class myGAN(Model):
         last_gen_iter = self.gen_iter
         z, y_temp = self.zbuf, self.ybuf
 
+        y_data = y_noise = self.y_out
+        y_data_Ep = y_noise_Ep = self.y_Ep
+        y_data_SUMEcal = y_noise_SUMEcal = self.y_SUMEcal
+
         # iterate through minibatches of the dataset
         for mb_idx, (x, labels, mb_max, mb_mean) in enumerate(dataset):
             callbacks.on_minibatch_begin(epoch, mb_idx)
@@ -268,11 +278,13 @@ class myGAN(Model):
             self.cost_dis_SUMEcal[:] = 0
 
             ######################## 1 - TRAIN DISCRIMINATOR ON NOISE
-            print("\n\n ######## RUN ID: " + my_run_random_prefix +
+            print("\n\n------------------------- RUN ID: " + my_run_random_prefix +
                   " -----> START MINIBATCH {0}\n\n---> 1 - TRAIN DISCRIMINATOR ON NOISE for the {0}-th time".format(
                       self.current_batch))
+
             myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
             Gz = self.fprop_gen(z) # Gz is a list with 1 element of batchsize size, being the generator defined as tree
+            (y_noise[:], y_noise_Ep[:], y_noise_SUMEcal[:]) = self.fprop_dis(Gz[0])
 
             if my_debug:
                 assert not np.isnan(z.get()).any(), "P1 - NAN in z input of generator"
@@ -280,14 +292,15 @@ class myGAN(Model):
                     assert not np.isnan(Gz[0].get()).any(), "P2 - NAN in Gz output of generator"
                 except:
                     print(Gz[0].get())
-
-            # getting separate discriminator outputs
-            y_noise_list = self.fprop_dis(Gz[0])#generator defined as tree os output will be a list
-            y_noise = y_noise_list[0]#  Real/Fake
-            y_noise_Ep = y_noise_list[1]# Particle Energy estimation done by discr
-            y_noise_SUMEcal = y_noise_list[2]# Total Energy on Cal estimation done by discr
-
+                assert not np.isnan(y_noise.get()).any(), "P3 - NAN in y_noise"
+                assert not np.isnan(y_noise_Ep.get()).any(), "P3 - NAN in y_noise_Ep"
+                try:
+                    assert not np.isnan(y_noise_SUMEcal.get()).any(), "P4 - NAN in y_noise_SUMEcal"
+                except:
+                    print(y_noise_SUMEcal.get())
             if my_gan_control_print_tensor_examples:
+                print("\n1 - TRAIN DISCRIMINATOR ON NOISE: example of estimated R/F of generated images (y_noise.get()):")
+                print(y_noise.get())
                 print("\n1 - TRAIN DISCRIMINATOR ON NOISE: example of estimated Ep of generated images (y_noise_Ep.get()):")
                 print(y_noise_Ep.get())
                 print("\n1 - TRAIN DISCRIMINATOR ON NOISE: example of estimated SUMECal of generated images (y_noise_SUMEcal.get()):")
@@ -296,14 +309,6 @@ class myGAN(Model):
             # buffering some values used later
             y_temp[:] = y_noise# Real/Fake discr output on noise
             t = myEnergies[0, :]# Ep inputs used to condition the noise input
-
-            if my_debug:
-                assert not np.isnan(y_noise.get()).any(), "P3 - NAN in y_noise"
-                assert not np.isnan(y_noise_Ep.get()).any(), "P3 - NAN in y_noise_Ep"
-                try:
-                    assert not np.isnan(y_noise_SUMEcal.get()).any(), "P4 - NAN in y_noise_SUMEcal"
-                except:
-                    print(y_noise_SUMEcal.get())
 
             # computing derivatives of cost function wrt discriminator outputs, on all output lines
             # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
@@ -330,31 +335,28 @@ class myGAN(Model):
             self.layers.discriminator.set_acc_on(True)
 
             ######################### 2 - TRAIN DISCRIMINATOR ON DATA
-            print("\n---> 2 - TRAIN DISCRIMINATOR ON DATA for the {}-th time".format(self.current_batch))
+            print("---> 2 - TRAIN DISCRIMINATOR ON DATA for the {}-th time".format(self.current_batch))
             # getting separate discriminator outputs.
-            y_data_list = self.fprop_dis(x)
-            y_data = y_data_list[0]#  Real/Fake
-            y_data_Ep = y_data_list[1]#  estimated Particle Energy
-            y_data_SUMEcal = y_data_list[2]#  Total Energy on Cal
-
-            #printing matrix for investigating:
-            if my_gan_control_print_tensor_examples:
-                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of Ep from dataset (labels[0, :].get())")
-                print(labels[0, :].get())
-                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of model estimated Ep(y_data_Ep.get()):")
-                print(y_data_Ep.get())
-                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of SUMEcal from dataset (labels[1, :].get())")
-                print(labels[1, :].get())
-                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of model estimated SUMECal (y_data_SUMEcal.get()):")
-                print(y_data_SUMEcal.get())
-                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of numpy sum of one image data from dataset: np.sum(x.get()[:], axis=(0,))")
-                temsum = np.sum(x.get()[:], axis=(0,))
-                print(temsum)
+            (y_data[:], y_data_Ep[:], y_data_SUMEcal[:]) = self.fprop_dis(x)
 
             if my_debug:
                 assert not np.isnan(y_noise.get()).any(), "P5 - not a number in y_noise"
                 assert not np.isnan(y_noise_Ep.get()).any(), "P5 - not a number in y_noise_Ep"
                 assert not np.isnan(y_noise_SUMEcal.get()).any(), "P5 - not a number in y_noise_SUMEcal"
+            if my_gan_control_print_tensor_examples:
+                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of Ep from dataset (labels[0, :].get())")
+                print(labels[0, :].get())
+                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of SUMEcal from dataset (labels[1, :].get())")
+                print(labels[1, :].get())
+                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of R/F estimated (y_data.get())")
+                print(y_data.get())
+                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of model estimated Ep (y_data_Ep.get()):")
+                print(y_data_Ep.get())
+                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of model estimated SUMECal (y_data_SUMEcal.get()):")
+                print(y_data_SUMEcal.get())
+                print("\n2 - TRAIN DISCRIMINATOR ON DATA: example of numpy sum of one image data from dataset: np.sum(x.get()[:], axis=(0,))")
+                temsum = np.sum(x.get()[:], axis=(0,))
+                print(temsum)
 
             # computing derivatives of cost function wrt discriminator outputs, on all output lines
             delta_data = self.cost.costs[0].costfunc.bprop_data(y_data)
@@ -385,7 +387,7 @@ class myGAN(Model):
             if my_compute_all_costs:
                 self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_data_Ep[0], labels[0, :][0])
                 self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_data_SUMEcal[0], labels[1, :][0])
-                print("MODEL: END OF DISCRMINATOR TRAINING: COSTS: Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}".format\
+                print("END OF DISCRMINATOR TRAINING: COSTS: Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}".format\
                           (self.cost_dis[0], self.cost_dis_Ep[0], self.cost_dis_SUMEcal[0]))
                 # TODO: why computing generator cost affect the cost displayed...
                 # TODO: ...by the ProgressBar callback, actually written by TrainCostCallback?
@@ -394,34 +396,38 @@ class myGAN(Model):
             ############################# 3 - TRAIN GENERATOR
             if my_gan_contol_train_gen:
                 # buffering some values
-                y_temp[:] = y_data  # needed?
+                # y_temp[:] = y_data  # needed?
                 if self.current_batch == 0 or self.current_batch == self.last_gen_batch + self.get_k(self.gen_iter):
-                    print("---> training the generator {}-th time".format(self.gen_iter))
+                    print("---> 3 - TRAIN GENERATOR {}-th time".format(self.gen_iter))
 
                     # gradient accumulation flag off for generator
                     self.layers.generator.set_acc_on(True)
 
-                    # generator cab trained more times before go back to discr training
+                    # generator can trained more times
                     ntimes_train_gen = my_gan_control_gen_times if (my_three_lines and not my_control_cost_function == "Wasserstein") else 1
                     for i in range(ntimes_train_gen):
-                        #noise sample and list of disriminator outputs
                         myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
                         Gz = self.fprop_gen(z)
+                        (y_noise[:], y_noise_Ep[:], y_noise_SUMEcal[:]) = self.fprop_dis(Gz[0])
+                        t = myEnergies[0, :]
 
                         if my_debug:
                             assert not np.isnan(Gz[0].get()).any(), "P6 - not a number in Gz output of generator"
 
-                        # getting separate discriminator outputs
-                        y_noise_list = self.fprop_dis(Gz[0])
-                        y_noise = y_noise_list[0]  # Real/Fake
-                        y_noise_Ep = y_noise_list[1]  #  Particle Energy
-                        y_noise_SUMEcal = y_noise_list[2]  # Total Energy on Cal
-                        t = myEnergies[0, :]
+                         #printing tensors for investigation
+                        if my_gan_control_print_tensor_examples:
+                            print(
+                            "\n3 - TRAIN GENERATOR: example of estimated Ep of generated images (y_noise_Ep.get()):")
+                            print(y_noise_Ep.get())
+                            print(
+                            "\n3 - TRAIN GENERATOR: example of estimated SUMECal of generated images (y_noise_SUMEcal.get()):")
+                            print(y_noise_SUMEcal.get())
 
                         # computing derivatives of cost functions wrt discriminator outputs, on all output lines
                         # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
+                        # attempt to do the trick, like switching labels
                         if my_gan_control_trick:
-                            delta_noise = self.cost.costs[0].costfunc.bprop_data(y_noise) #attempt to do the trick
+                            delta_noise = self.cost.costs[0].costfunc.bprop_data(y_noise)
                         else:
                             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
                         delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
@@ -429,20 +435,18 @@ class myGAN(Model):
                             tp = (2 * t - mb_mean * Gz[0].shape[0])/mb_max
                             tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
                             tpval[:] = tp  # execute the op-tree
-                            #print(tpval.get())
                         elif data_normalization == "for_logistic_output":
                             tpval = 2 * t / mb_max
                         else:
                             tpval = 2 * t
                         delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, tpval)
 
-                        # discriminator backprop: computing gradient contributions from all three output lines, for discriminator weights
+                        # discriminator and generator backprop: computing gradient contributions
+                        # from all three output lines, for discriminator weights
                         if my_three_lines:
                             delta_nnn = self.bprop_dis([delta_noise, delta_noise_Ep, delta_noise_SUMEcal])
                         else:
                             delta_nnn = self.bprop_dis([delta_noise, 0 * delta_noise_Ep, 0 * delta_noise_SUMEcal])
-
-                        # generator backbrop
                         self.bprop_gen(delta_nnn)
 
                     # using gradients so calculated to tweak the generator weights
@@ -452,14 +456,13 @@ class myGAN(Model):
                     self.layers.generator.set_acc_on(False)
 
                     # keep GAN cost values for the current minibatch
-                    # self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_noise, cost_type='gen')
                     # add something like this with support in callbacks for generator cost displaying?
                     self.cost_dis[:] = self.cost.costs[0].get_cost(y_temp, y_noise, cost_type='dis')
                     if my_compute_all_costs:
                         self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_noise_Ep[0], t)
                         self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_noise_SUMEcal[0], tpval)
                         self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_noise, cost_type='gen')
-                        print("MODEL: END OF GENERATOR TRAINING: COSTS: Discr. Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}  Generator cost: {}".format\
+                        print("END OF GENERATOR TRAINING: COSTS: Discr. Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}  Generator cost: {}".format\
                                   (self.cost_dis[0], self.cost_dis_Ep[0], self.cost_dis_SUMEcal[0], self.cost_gen[0]))
 
                         if my_gan_control_print_tensor_examples:
@@ -475,26 +478,25 @@ class myGAN(Model):
                     self.last_gen_batch = self.current_batch
                     self.gen_iter += 1
 
-            #adding temporary saving of plots and hdf5 data
+            # temporary saving of plots and hdf5 data: todo: move this plot into callbacks
             if self.current_batch % data_saving_freq == 0:
-                # last output of the generator from the backend object (tested with GPU)
-                gen_output = Gz[0].get()
-                self.plot_partials_generations(gen_output, t.get(), y_noise.get(), y_noise_Ep.get(), y_noise_SUMEcal.get(), kind="generated")
+                # last output of the generator from the backend object
+                self.plot_partials_generations(Gz[0].get(), t.get(), y_noise.get(), y_noise_Ep.get(), y_noise_SUMEcal.get(), kind="generated")
 
-                #saving params
-                if my_gan_control_save_prm:
-                    fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
-                    genfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + \
-                              'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].prm'
-                    discfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + \
-                              'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].prm'
-                    gen_filename = os.path.join(fdir, genfname)
-                    disc_filename = os.path.join(fdir, discfname)
-                    my_generator = Model(self.layers.generator)
-                    my_generator.save_params(gen_filename)
-                    # my_discriminator = Model(self.layers.discriminator)
-                    # my_discriminator.save_params(disc_filename)
-                    print("Saved prm files for generator and :\nGen--> {}\nDisc--> {}".format(gen_filename, disc_filename))
+            #saving params: todo: move this plot into callbacks
+            if my_gan_control_save_prm:
+                fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
+                genfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + \
+                          'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].prm'
+                discfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + \
+                          'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].prm'
+                gen_filename = os.path.join(fdir, genfname)
+                disc_filename = os.path.join(fdir, discfname)
+                my_generator = Model(self.layers.generator)
+                my_generator.save_params(gen_filename)
+                # my_discriminator = Model(self.layers.discriminator)
+                # my_discriminator.save_params(disc_filename)
+                print("Saved prm files for generator and :\nGen--> {}\nDisc--> {}".format(gen_filename, disc_filename))
 
             self.be.end(Block.minibatch, mb_idx)
             callbacks.on_minibatch_end(epoch, mb_idx)

@@ -376,7 +376,10 @@ class BranchNode(Layer):
         Returns:
             Tensor: output data
         """
-        if self.outputs is None and inputs is not None:
+        #todo: both options below do not work: but when and where self.outputs gets written???
+        # if self.outputs is None and inputs is not None:
+        #     self.outputs = inputs
+        if inputs is not None:
             self.outputs = inputs
         return self.outputs
 

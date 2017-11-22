@@ -110,24 +110,17 @@ def discriminator():
         branch1 = [b1,
                     Conv((3, 3, 3, 96), name="Discriminator", **convp1_l1), #outshape 25x25x25
                     Dropout(keep=0.8),
-
                     Conv((3, 3, 3, 96), name="Discriminator", **convp1s2), #outshape 13x13x13
                     Dropout(keep=0.8),
-
                     Conv((3, 3, 3, 192), name="Discriminator", **convp1), #outshape 13x13x13
                     Dropout(keep=0.8),
-
                     Conv((3, 3, 3, 192), name="Discriminator", **convp1s2), # outshape 7x7x7
                     Dropout(keep=0.8),
-
                     Conv((3, 3, 3, 96), name="Discriminator", **convp1), # outshape 7x7x7
                     Dropout(keep=0.8),
-
-                   Conv((3, 3, 3, 96), name="Discriminator", **convp1s2),  # outshape 4x4x4
-                   Dropout(keep=0.8),
-
+                    Conv((3, 3, 3, 96), name="Discriminator", **convp1s2),  # outshape 4x4x4
+                    Dropout(keep=0.8),
                     b2,
-
                     Conv((1, 1, 1, 16), name="Discriminator", **conv), # outshape 4x4x4
                     Top_Layer
                    ]
@@ -138,7 +131,7 @@ def discriminator():
                    Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")]  # SUM ECAL
 
     if my_three_lines:
-        D_layers = SingleOutputTree([branch1, branch2, branch3], alphas=my_alpha)
+        D_layers = Tree([branch1, branch2, branch3], alphas=my_alpha)
         print("Using Three lines with alpha = {}".format(my_alpha))
     else:
         D_layers = Tree([branch1, branch2, branch3], alphas=my_alpha_balanced)
@@ -239,6 +232,6 @@ def generator():
                           init=init_gen, batch_norm=True, padding=pad_hwd_111,
                           activation=Tanh())] #Logistic(shortcut=False))]
 
-    G_layers = Tree([branchg], name="Generator")
+    G_layers = Tree([branchg])
     return G_layers
 

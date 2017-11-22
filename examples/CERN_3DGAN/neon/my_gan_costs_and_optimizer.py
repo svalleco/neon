@@ -45,5 +45,4 @@ class RelativeCost(Cost):
 class DummyOptimizer(Optimizer):
 
     def optimize(self, layer_list, epoch):
-        print("CALLED DUMMY OPT")
         pass
