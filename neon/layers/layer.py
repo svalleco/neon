@@ -360,6 +360,7 @@ class BranchNode(Layer):
     def __init__(self, name=None):
         # don't init if this is not a new instance
         # see __new__ above
+        print("Initializing Branch node {}".format(name))
         if name not in BranchNode.instances:
             BranchNode.instances[name] = self
             super(BranchNode, self).__init__(name)

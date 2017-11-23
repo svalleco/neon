@@ -11,10 +11,12 @@ my_gan_control_print_tensor_examples = False
 my_compute_all_costs = True
 save_training_progress = False #hdf files
 my_gan_control_save_prm = False #prm files
+my_gan_control_feed_dummy_data = "no"
+my_gan_control_print_image_of_training_on_data = False
 
 #data mng
 my_use_hdf5_iterator = True
-data_saving_freq = 10
+data_saving_freq = 400
 
 #Initializations
 my_xavier_discr = False # with True will lead to NANs in discriminator fake/real output. Why?
@@ -23,7 +25,7 @@ my_gaussian_scale_init_for_generator = 0.001
 my_gaussian_scale_init_for_discriminator = 0.01
 
 #duration and batchsize, latent size
-my_gan_control_batch_size = 16
+my_gan_control_batch_size = 128
 my_gan_control_nb_epochs = 30
 my_gan_control_latent_size = 1024
 
@@ -42,14 +44,14 @@ my_control_cost_function = "Modified" #  Wasserstein, Modified, Original
 
 #model configuration
 my_three_lines = True
-my_alpha = (10, 2, 1)
+my_alpha = (60, 1, 2) # : R/F, SUMEcal, Ep
 my_alpha_balanced = (1, 1, 1) # 0 multiplier in my_gan_model will apply in this case (my_three_lines = True) on lines other than real/fake
 my_gan_lshape = (1, 25, 25, 25)
 discriminator_option = 1 # 1 original ,2 = Sofia's 2nd version ,3 = all convolution
 generator_option = 2 # 1 original ,2 = Sofia's 2nd version ,3 = all deconvolution
 # NB this below requires manually setting of gen output layer accordingly
 data_normalization = "no"# """for_tanh_output" # "for_tanh_output" "for_logistic_output"; else or nothing for relu (as output layer of generator)
-my_gan_k = 1 #>0
+my_gan_k = 2 #>0
 my_gan_control_gen_times = 1 #2 it was as in Keras
 my_gan_contol_train_gen = True
 my_gan_control_trick = True #enabling backprop on generator making discriminator think that is data: trick as in Keras implementation??

@@ -338,8 +338,12 @@ class my_gan_HDF5Iterator(ArrayIterator):
             my_buf = np.array(xdev[i1:i2, :]).astype(np.float32) # converting batch to numpy
             my_buf = np.moveaxis(my_buf, 0, -1) # moving batch axis at the end, keeping the x,y,z order (now X,Y,Z,N)
             mini_batch_in[:, :bsz] = my_buf.reshape((np.array(self.lshape)).prod(), bsz) #reshaping into 25*25*25xN
-            mini_batch_in[:, :bsz] = np.ones(mini_batch_in[:, :bsz].shape)
-            # just transposing above does N,x,y,z into z,y,x,N
+            # just transposing above would do N,x,y,z into z,y,x,N
+
+            if my_gan_control_feed_dummy_data == "ones":
+                mini_batch_in[:, :bsz] = np.ones(mini_batch_in[:, :bsz].shape)
+            elif my_gan_control_feed_dummy_data == "noise":
+                mini_batch_in[:, :bsz] = np.random.random(mini_batch_in[:, :bsz].shape)
 
             if self.be.bsz > bsz:
                 mini_batch_in[:, bsz:] = xdev[:(self.be.bsz - bsz), :].T.astype(np.float32)

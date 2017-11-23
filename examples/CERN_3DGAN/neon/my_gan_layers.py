@@ -1,6 +1,6 @@
 from neon.initializers import Gaussian, Constant, Xavier
 from neon.layers import GeneralizedGANCost, Affine, Linear, Sequential, Conv, Deconv, Dropout, Pooling, BatchNorm, BranchNode, GeneralizedCost
-from neon.layers.layer import Linear, Reshape
+from neon.layers.layer import Linear, Reshape, SkipNode
 from neon.layers.container import Tree, SingleOutputTree, Multicost, LayerContainer, GenerativeAdversarial
 from neon.transforms import Rectlin, Logistic, GANCost, Tanh, MeanSquared, Identity
 from neon.layers.layer import Dropout
@@ -30,7 +30,7 @@ def discriminator():
         conv3 = dict(init=init, batch_norm=False, activation=lrelu, padding=1, bias=init)
         b1 = BranchNode("b1")
         b2 = BranchNode("b2")
-        branch1 = [b1,
+        branch0 = [b1,
                     Conv((5, 5, 5, 32), name="Discriminator", **conv1), #21x21x21
                     Dropout(keep = 0.8),
                     Conv((5, 5, 5, 8), name="Discriminator", **conv2), #21x21x21
@@ -50,10 +50,11 @@ def discriminator():
                     b2,
                     Top_Layer
                     ] #real/fake
+        branch1 = [b1,
+                   Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")] #SUM ECAL
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, activation=lrelu)] #E primary
-        branch3 = [b1,
-                   Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")] #SUM ECAL
+
 
     elif discriminator_option == 2:
         lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
@@ -63,7 +64,7 @@ def discriminator():
         conv3 = dict(init=init, batch_norm=False, activation=lrelu, padding=1, bias=init)
         b1 = BranchNode("b1")
         b2 = BranchNode("b2")
-        branch1 = [b1,
+        branch0 = [b1,
                    Conv((5, 5, 5, 32), name="Discriminator",  **conv1),
                    Dropout(keep=0.8),
                    Conv((5, 5, 5, 8), name="Discriminator", **conv2),
@@ -83,10 +84,11 @@ def discriminator():
                    b2,
                    Top_Layer
                    ]  # real/fake
+        branch1 = [b1,
+                   Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")]  # SUM ECAL
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, name="Discriminator",  activation=lrelu)]  # E primary
-        branch3 = [b1,
-                   Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")]  # SUM ECAL
+
 
     else:#discriminiator using convolution layers
         if my_control_cost_function == "Wasserstein":
@@ -107,7 +109,7 @@ def discriminator():
         conv = dict(init=init, batch_norm=True, activation=lrelu)
         b1 = BranchNode("b1")
         b2 = BranchNode("b2")
-        branch1 = [b1,
+        branch0 = [b1,
                     Conv((3, 3, 3, 96), name="Discriminator", **convp1_l1), #outshape 25x25x25
                     Dropout(keep=0.8),
                     Conv((3, 3, 3, 96), name="Discriminator", **convp1s2), #outshape 13x13x13
@@ -123,18 +125,18 @@ def discriminator():
                     b2,
                     Conv((1, 1, 1, 16), name="Discriminator", **conv), # outshape 4x4x4
                     Top_Layer
-                   ]
-
+                   ] # Real/Fake
+        branch1 = [b1,
+                   Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")]  # SUM ECAL
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, name="Discriminator", activation=lrelu)]  # E primary
-        branch3 = [b1,
-                   Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")]  # SUM ECAL
+
 
     if my_three_lines:
-        D_layers = Tree([branch1, branch2, branch3], alphas=my_alpha)
+        D_layers = Tree([branch0, branch1, branch2], alphas=my_alpha)
         print("Using Three lines with alpha = {}".format(my_alpha))
     else:
-        D_layers = Tree([branch1, branch2, branch3], alphas=my_alpha_balanced)
+        D_layers = Tree([branch0, branch1, branch2], alphas=my_alpha_balanced)  # Real/Fake, SUM ECAL, E primary
     return D_layers
 
 
@@ -222,12 +224,12 @@ def generator():
         branchg = [bg,
                    Affine(7 * 7 * 7 * 1, init=init_gen, bias=init_gen),
                    Reshape((1, 7, 7, 7)),
-                   Deconv((1, 1, 1, 16), name="G11", **conv),  # inshape: 4,7,7,7 outshape: 16,7,7,7 V
-                   Deconv((3, 3, 3, 64), name="G12", **convp1_a),  # outshape: 64,7,7,7 V - padding in d was 0 by def?
-                   Deconv((3, 3, 3, 96), name="G21", **convp1s2_a),  # outshape: 96,13,13,13 V
-                   Deconv((3, 3, 3, 96), name="G22", **convp1_a),  # outshape: 96,13,13,13
-                   Deconv((3, 3, 3, 64), name="G31", **convp1s2_a),  # outshape: 64,25,25,25
-                   Deconv((3, 3, 3, 16), name="G32", **convp1_a), # outshape: 16,25,25,25
+                   Deconv((1, 1, 1, 96), name="G11", **conv),  # inshape: 4,7,7,7 outshape: 96,7,7,7 V
+                   Deconv((3, 3, 3, 96), name="G12", **convp1_a),  # outshape: 96,7,7,7 V - padding in d was 0 by def?
+                   Deconv((3, 3, 3, 192), name="G21", **convp1s2_a),  # outshape: 192,13,13,13 V
+                   Deconv((3, 3, 3, 192), name="G22", **convp1_a),  # outshape: 192,13,13,13
+                   Deconv((3, 3, 3, 96), name="G31", **convp1s2_a),  # outshape: 96,25,25,25
+                   Deconv((3, 3, 3, 96), name="G32", **convp1_a), # outshape: 96,25,25,25
                    Deconv((3, 3, 3, 1), name="G_out",  # outshape: 1,25,25,25
                           init=init_gen, batch_norm=True, padding=pad_hwd_111,
                           activation=Tanh())] #Logistic(shortcut=False))]

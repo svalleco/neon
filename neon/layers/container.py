@@ -571,6 +571,7 @@ class Tree(LayerContainer):
             Tensor: output data
         """
         x = self.layers[0].fprop(inputs, inference)
+        # The other branches should have their input in the output of the branch nodes
         out = [x] + [l.fprop(None, inference=inference) for l in self.layers[1:]]
         return out
 

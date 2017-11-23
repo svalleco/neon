@@ -279,12 +279,12 @@ class myGAN(Model):
 
             ######################## 1 - TRAIN DISCRIMINATOR ON NOISE
             print("\n\n------------------------- RUN ID: " + my_run_random_prefix +
-                  " -----> START MINIBATCH {0}\n\n---> 1 - TRAIN DISCRIMINATOR ON NOISE for the {0}-th time".format(
-                      self.current_batch))
+                  " -----> START MINIBATCH {0}\n\n---> 1 - TRAIN DISCRIMINATOR ON NOISE ".format(
+                      self.current_batch) + "for the {0}-th time".format(self.current_batch))
 
             myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
             Gz = self.fprop_gen(z) # Gz is a list with 1 element of batchsize size, being the generator defined as tree
-            (y_noise[:], y_noise_Ep[:], y_noise_SUMEcal[:]) = self.fprop_dis(Gz[0])
+            (y_noise[:], y_noise_SUMEcal[:], y_noise_Ep[:]) = self.fprop_dis(Gz[0])
 
             if my_debug:
                 assert not np.isnan(z.get()).any(), "P1 - NAN in z input of generator"
@@ -313,7 +313,7 @@ class myGAN(Model):
             # computing derivatives of cost function wrt discriminator outputs, on all output lines
             # approx of Esum as 2 times Ep, numerically, after rescaling in energy_dataset.py
             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
-            delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
+            delta_noise_Ep = self.cost.costs[2].costfunc.bprop(y_noise_Ep, t)
             if data_normalization == "for_tanh_output":
                 tp = (2 * t - mb_mean * Gz[0].shape[0]) / mb_max
                 tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
@@ -322,13 +322,13 @@ class myGAN(Model):
                 tpval = 2 * t / mb_max
             else:
                 tpval = 2 * t
-            delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, tpval)
+            delta_noise_SUMEcal = self.cost.costs[1].costfunc.bprop(y_noise_SUMEcal, tpval)
 
             # computing gradient contributions from all three output lines, for discriminator weights
             if my_three_lines:
-                self.bprop_dis([delta_noise, delta_noise_Ep, delta_noise_SUMEcal])
+                self.bprop_dis([delta_noise, delta_noise_SUMEcal, delta_noise_Ep])
             else:
-                self.bprop_dis([delta_noise, 0 * delta_noise_Ep, 0 * delta_noise_SUMEcal])
+                self.bprop_dis([delta_noise, 0 * delta_noise_SUMEcal, 0 * delta_noise_Ep])
 
             # set flag for accumulation of gradients so far computed as addition of the gradients on
             # data training is next
@@ -337,7 +337,7 @@ class myGAN(Model):
             ######################### 2 - TRAIN DISCRIMINATOR ON DATA
             print("---> 2 - TRAIN DISCRIMINATOR ON DATA for the {}-th time".format(self.current_batch))
             # getting separate discriminator outputs.
-            (y_data[:], y_data_Ep[:], y_data_SUMEcal[:]) = self.fprop_dis(x)
+            (y_noise[:], y_noise_SUMEcal[:], y_noise_Ep[:]) = self.fprop_dis(x)
 
             if my_debug:
                 assert not np.isnan(y_noise.get()).any(), "P5 - not a number in y_noise"
@@ -360,19 +360,19 @@ class myGAN(Model):
 
             # computing derivatives of cost function wrt discriminator outputs, on all output lines
             delta_data = self.cost.costs[0].costfunc.bprop_data(y_data)
-            delta_data_Ep = self.cost.costs[1].costfunc.bprop(y_data_Ep, labels[0, :])
-            delta_data_SUMEcal = self.cost.costs[2].costfunc.bprop(y_data_SUMEcal, labels[1, :])
+            delta_data_SUMEcal = self.cost.costs[1].costfunc.bprop(y_data_SUMEcal, labels[1, :])
+            delta_data_Ep = self.cost.costs[2].costfunc.bprop(y_data_Ep, labels[0, :])
 
             #plotting data for checking consistency
-            if self.current_batch % data_saving_freq == 0:
+            if self.current_batch % data_saving_freq == 0 and my_gan_control_print_image_of_training_on_data:
                 self.plot_partials_generations(x.get(), labels[0, :].get(), y_data.get(), y_data_Ep.get(),
                                                y_data_SUMEcal.get(), kind="data")
 
             # computing gradient contributions from all three output lines, for discriminator weights
             if my_three_lines:
-                self.bprop_dis([delta_data, delta_data_Ep, delta_data_SUMEcal])
+                self.bprop_dis([delta_data, delta_data_SUMEcal, delta_data_Ep])
             else:
-                self.bprop_dis([delta_data, 0 * delta_data_Ep, 0 * delta_data_SUMEcal])
+                self.bprop_dis([delta_data, 0 * delta_data_SUMEcal, 0 * delta_data_Ep])
 
             # using gradients so calculated to tweak the discriminator weights
             self.optimizer.optimize(self.layers.discriminator.layers_to_optimize, epoch=epoch)
@@ -385,8 +385,8 @@ class myGAN(Model):
             self.cost_dis[:] = self.cost.costs[0].get_cost(y_data, y_temp, cost_type='dis')
 
             if my_compute_all_costs:
-                self.cost_dis_Ep[:] = self.cost.costs[1].get_cost(y_data_Ep[0], labels[0, :][0])
-                self.cost_dis_SUMEcal[:] = self.cost.costs[2].get_cost(y_data_SUMEcal[0], labels[1, :][0])
+                self.cost_dis_SUMEcal[:] = self.cost.costs[1].get_cost(y_data_SUMEcal[0], labels[1, :][0])
+                self.cost_dis_Ep[:] = self.cost.costs[2].get_cost(y_data_Ep[0], labels[0, :][0])
                 print("END OF DISCRMINATOR TRAINING: COSTS: Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}".format\
                           (self.cost_dis[0], self.cost_dis_Ep[0], self.cost_dis_SUMEcal[0]))
                 # TODO: why computing generator cost affect the cost displayed...
@@ -408,7 +408,7 @@ class myGAN(Model):
                     for i in range(ntimes_train_gen):
                         myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
                         Gz = self.fprop_gen(z)
-                        (y_noise[:], y_noise_Ep[:], y_noise_SUMEcal[:]) = self.fprop_dis(Gz[0])
+                        (y_noise[:], y_noise_SUMEcal[:], y_noise_Ep[:]) = self.fprop_dis(Gz[0]) #restituisce valori vecchi (anche dal data batch)# : memory issues?
                         t = myEnergies[0, :]
 
                         if my_debug:
@@ -430,7 +430,7 @@ class myGAN(Model):
                             delta_noise = self.cost.costs[0].costfunc.bprop_data(y_noise)
                         else:
                             delta_noise = self.cost.costs[0].costfunc.bprop_noise(y_noise)
-                        delta_noise_Ep = self.cost.costs[1].costfunc.bprop(y_noise_Ep, t)
+                        delta_noise_Ep = self.cost.costs[2].costfunc.bprop(y_noise_Ep, t)
                         if data_normalization == "for_tanh_output":
                             tp = (2 * t - mb_mean * Gz[0].shape[0])/mb_max
                             tpval = self.be.empty((1, self.be.bsz))  # allocate space for output
@@ -439,14 +439,14 @@ class myGAN(Model):
                             tpval = 2 * t / mb_max
                         else:
                             tpval = 2 * t
-                        delta_noise_SUMEcal = self.cost.costs[2].costfunc.bprop(y_noise_SUMEcal, tpval)
+                        delta_noise_SUMEcal = self.cost.costs[1].costfunc.bprop(y_noise_SUMEcal, tpval)
 
                         # discriminator and generator backprop: computing gradient contributions
                         # from all three output lines, for discriminator weights
                         if my_three_lines:
-                            delta_nnn = self.bprop_dis([delta_noise, delta_noise_Ep, delta_noise_SUMEcal])
+                            delta_nnn = self.bprop_dis([delta_noise, delta_noise_SUMEcal, delta_noise_Ep])
                         else:
-                            delta_nnn = self.bprop_dis([delta_noise, 0 * delta_noise_Ep, 0 * delta_noise_SUMEcal])
+                            delta_nnn = self.bprop_dis([delta_noise, 0 * delta_noise_SUMEcal, 0 * delta_noise_Ep])
                         self.bprop_gen(delta_nnn)
 
                     # using gradients so calculated to tweak the generator weights
@@ -465,23 +465,24 @@ class myGAN(Model):
                         print("END OF GENERATOR TRAINING: COSTS: Discr. Real/Fake cost: {}    Ep cost: {}     SUMEcal cost: {}  Generator cost: {}".format\
                                   (self.cost_dis[0], self.cost_dis_Ep[0], self.cost_dis_SUMEcal[0], self.cost_gen[0]))
 
-                        if my_gan_control_print_tensor_examples:
-                            print("\n3 - TRAIN GENERATOR: Estimated SUM \n")
-                            print(y_noise_SUMEcal.get())
-                            print("\n3 - TRAIN GENERATOR: tpval")
-                            tpvall = self.be.empty((1, self.be.bsz))  # allocate space for output
-                            tpvall[:] = tpval  # execute the op-tree
-                            print(tpvall.get())
+                    if my_gan_control_print_tensor_examples:
+                        print("\n3 - TRAIN GENERATOR: Estimated SUM \n")
+                        print(y_noise_SUMEcal.get())
+                        print("\n3 - TRAIN GENERATOR: tpval")
+                        tpvall = self.be.empty((1, self.be.bsz))  # allocate space for output
+                        tpvall[:] = tpval  # execute the op-tree
+                        print(tpvall.get())
+
+                    # temporary saving of plots and hdf5 data: todo: move this plot into callbacks
+                    if self.current_batch % data_saving_freq == 0:
+                        # last output of the generator from the backend object
+                        self.plot_partials_generations(Gz[0].get(), t.get(), y_noise.get(), y_noise_Ep.get(),
+                                                       y_noise_SUMEcal.get(), kind="generated")
 
                     # accumulate total cost.
                     self.total_cost[:] = self.total_cost + self.cost_dis
                     self.last_gen_batch = self.current_batch
                     self.gen_iter += 1
-
-            # temporary saving of plots and hdf5 data: todo: move this plot into callbacks
-            if self.current_batch % data_saving_freq == 0:
-                # last output of the generator from the backend object
-                self.plot_partials_generations(Gz[0].get(), t.get(), y_noise.get(), y_noise_Ep.get(), y_noise_SUMEcal.get(), kind="generated")
 
             #saving params: todo: move this plot into callbacks
             if my_gan_control_save_prm:

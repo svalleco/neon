@@ -142,7 +142,7 @@ def main():
     mapping = {'NotOptimizeLinear': DummyOptimizer(), 'Discriminator': my_discr_optimizer, 'default': my_gen_optimizer}
     optimizer = MultiOptimizer(mapping)
 
-    # setup cost functions
+    # setup cost functions R/F, SUMEcal, Ep
     if my_control_cost_function == "Wasserstein":
         my_func = "wasserstein"
     elif my_control_cost_function == "Modified":
@@ -156,7 +156,7 @@ def main():
         print("Using MeanSquared cost function for Auxiliary Classifiers")
     else: #RelativeCost
         cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)),  # wasserstein / modified /original
-                                GeneralizedCost(costfunc=RelativeCost()), #RelativeCost
+                                GeneralizedCost(costfunc=RelativeCost()), #RelativeCost() / MeanSquared()
                                 GeneralizedCost(costfunc=RelativeCost())])
         print("Using RelativeCost cost function for Auxiliary Classifiers")
 
