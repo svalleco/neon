@@ -402,7 +402,7 @@ class Sequential(LayerContainer):
             else:
                 if isinstance(error, OpTreeNode):
                     error = error.astensor()
-                error = l.bprop(error) # error now mkl tensor. in here OpTreeNode execute called????
+                error = l.bprop(error) # error now mkl tensor. in here OpTreeNode execute called???? NO alpha beta here???
 
             for tensor in l.revert_list:
                 self.be.revert_tensor(tensor)

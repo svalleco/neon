@@ -217,9 +217,9 @@ class myGAN(Model):
     def plot_partials_generations(self, Gen_output, cond_labels, prob_fake_real, Ep_estimated, SUMEcal_estimated, kind="generated"):
         # setting filenames
         fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
-        plfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + timestamp +  "-" + kind + "-" + \
+        plfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + my_run_timestamp +  "-" + kind + "-" + \
                   'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + ']'
-        h5fname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + timestamp + \
+        h5fname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + my_run_timestamp + \
                   'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].h5'
         plt_filename = os.path.join(fdir, plfname)
         h5_filename = os.path.join(fdir, h5fname)
@@ -279,11 +279,12 @@ class myGAN(Model):
 
             ######################## 1 - TRAIN DISCRIMINATOR ON NOISE
             print("\n\n------------------------- RUN ID: " + my_run_random_prefix +
-                  " -----> START MINIBATCH {0}\n\n---> 1 - TRAIN DISCRIMINATOR ON NOISE ".format(
-                      self.current_batch) + "for the {0}-th time".format(self.current_batch))
+                  " -----> START MINIBATCH {0}\n\n---> 1 - TRAIN DISCRIMINATOR ON NOISE ".
+                  format(self.current_batch) + "for the {0}-th time".format(self.current_batch))
 
             myEnergies = self.fill_noise_sampledE(z, normal=(self.noise_type == 'normal'))
-            Gz = self.fprop_gen(z) # Gz is a list with 1 element of batchsize size, being the generator defined as tree
+            Gz = self.fprop_gen(z)
+            # Gz is a list, with 1 element of batchsize size, being the generator defined as tree
             (y_noise[:], y_noise_SUMEcal[:], y_noise_Ep[:]) = self.fprop_dis(Gz[0])
 
             if my_debug:

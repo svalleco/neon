@@ -2483,7 +2483,7 @@ class BatchNorm(Layer):
         Returns:
 
         """
-        assert alpha == 1.0 and beta == 0.0
+        assert alpha == 1.0 and beta == 0.0 #why??
         if not self.error_view:
             self.error_view = error.reshape((self.nfm, -1))
 

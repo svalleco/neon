@@ -97,7 +97,7 @@ def main():
     yy = Y.get()
     yy[ yy < 1e-6 ] = 0#removing non physical values
     in_batch = np.random.randint(0, batch_size)
-    lyr = np.random.randint(0, 25)
+    lyr = np.random.randint(0, 25) # should be 12 always?
     tt = tt.reshape(25, 25, 25, batch_size)
     tensor_to_print = [tt[:, lyr, :, in_batch], tt[:, :, lyr, in_batch], tt[lyr, :, :, in_batch]]
     for i in range(3):
@@ -166,7 +166,7 @@ def main():
 
     # configure callbacks
     #callbacks = Callbacks(gan, eval_set=valid_set)
-    callbacks = Callbacks(gan, output_file= res_dir + my_run_random_prefix + "callbacks_out_" + timestamp + '.h5')
+    callbacks = Callbacks(gan, output_file= res_dir + my_run_random_prefix + "callbacks_out_" + my_run_timestamp + '.h5')
     callbacks.add_callback(TrainMulticostCallback()) # position in the list of callbacks can be specified here. Put 0?
 
     #training
@@ -178,8 +178,8 @@ def main():
     #gan.save_params('our_gan.prm')
 
     fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
-    generator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + timestamp + '].prm'
-    discriminator_file_name = my_run_random_prefix +  os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + timestamp + '].prm'
+    generator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + my_run_timestamp + '].prm'
+    discriminator_file_name = my_run_random_prefix +  os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + my_run_timestamp + '].prm'
 
     my_generator = Model(gan.layers.generator)
     my_generator.save_params(generator_file_name)

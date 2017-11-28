@@ -197,9 +197,12 @@ class my_gan_HDF5Iterator(ArrayIterator):
 
         self.inpbuf = None
         self.outbuf = None
+        self.allocated = False
         self.inp_max = None
         self.inp_mean = None
-        self.allocated = False
+        #todo: save these two into hdf5 file
+        self.dataset_max = 0.435621724068 # got from previous runs:
+        self.dataset_mean = 0.00311173243963 # tte = self.inp[:];  np.mean(tte[tte > 1e-6])
 
     def allocate(self):
         """
@@ -354,13 +357,17 @@ class my_gan_HDF5Iterator(ArrayIterator):
             mini_batch_in[mini_batch_in < 1e-6] = 0
 
             mb_mean = np.mean(mini_batch_in)  # use self.be here?
-            mb_max = np.max(mini_batch_in)  # all values are poisitive
+            mb_max = np.max(mini_batch_in)  # all values are positive
 
             if data_normalization == "for_tanh_output":
-                mini_batch_in[:] = (mini_batch_in - mb_mean)/ mb_max #rescaling into [-1,1] as it will compare with tanh output from generator Tanh
+                #for minibatch wide normalization:
+                #mini_batch_in[:] = (mini_batch_in - mb_mean)/ mb_max #rescaling into [-1,1] as it will compare with tanh output from generator Tanh
+                mini_batch_in[:] = (mini_batch_in - self.dataset_mean)/ self.dataset_max #rescaling into [-1,1] as it will compare with tanh output from generator Tanh
             elif data_normalization == "for_logistic_output":
                 mb_mean = 0.0
-                mini_batch_in[:] = mini_batch_in / mb_max #rescaling into [0,1] as it will compare with tanh output from generator Logistic
+                #for minibatch wide normalization:
+                #mini_batch_in[:] = mini_batch_in / mb_max #rescaling into [0,1] as it will compare with tanh output from generator Logistic
+                mini_batch_in[:] = mini_batch_in / self.dataset_max
             else:
                  mb_mean = mb_max = 0.0
 
@@ -390,8 +397,8 @@ class my_gan_HDF5Iterator(ArrayIterator):
 
             inputs = self.inpbuf
             targets = self.outbuf
-            mini_batch_max = self.inp_max
-            mini_batch_mean = self.inp_mean
+            mini_batch_max = self.dataset_max #self.inp_max
+            mini_batch_mean = self.dataset_mean #self.inp_mean
 
             yield (inputs, targets, mini_batch_max, mini_batch_mean)
 
