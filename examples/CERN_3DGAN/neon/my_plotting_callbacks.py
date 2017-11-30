@@ -33,7 +33,7 @@ except ImportError as e:
     raise(e)
 
 
-class GANPlotCallback(Callback):
+class myGANPlotCallback(Callback):
     """
     Create PNG plots of samples from a GAN model.
 
@@ -50,9 +50,9 @@ class GANPlotCallback(Callback):
         font_size (int): font size of labels.
         epoch_freq (int): number of epochs per plotting callback.
     """
-    def __init__(self, filename, hw=28, nchan=1, num_samples=16, sym_range=False, padding=2,
+    def __init__(self, filename, hw=25, nchan=1, num_samples=64, sym_range=False, padding=2,
                  plot_width=1200, plot_height=600, dpi=60., font_size=10, epoch_freq=1):
-        super(GANPlotCallback, self).__init__(epoch_freq=epoch_freq)
+        super(myGANPlotCallback, self).__init__(epoch_freq=epoch_freq)
         self.filename = filename
         self.hw = hw
         self.nchan = nchan
@@ -73,7 +73,7 @@ class GANPlotCallback(Callback):
         return batch
 
     def _shape_transform(self, batch):
-        assert self.nchan * self.hw * self.hw * self.hw == batch.shape[0], "wrong image size specified"
+        assert self.nchan * self.hw * self.hw == batch.shape[0], "wrong image size specified"
         assert self.num_samples <= batch.shape[1], "number of samples must not exceed batch size"
 
         nrow = int(np.ceil(np.sqrt(self.num_samples)))
@@ -82,14 +82,14 @@ class GANPlotCallback(Callback):
         height = nrow*(self.hw+self.padding)-self.padding
 
         batch = batch[:, :self.num_samples]
-        batch = batch.reshape(self.nchan, self.hw, self.hw, self.num_samples)
-        batch = np.swapaxes(np.swapaxes(batch, 0, 2), 0, 1)
+        batch = batch.reshape(self.nchan, self.hw, self.hw, self.hw, self.num_samples)
+        batch = np.swapaxes(np.swapaxes(np.swapaxes(batch, 0, 1), 1, 2), 2, 3)
 
         canvas = np.ones([height, width, self.nchan])
         for i in range(self.num_samples):
             irow, icol, step = i % nrow, i // nrow, self.hw + self.padding
             canvas[irow*step:irow*step+self.hw, icol*step:icol*step+self.hw, :] = \
-                batch[:, :, ::-1, i]
+                batch[:, :, 12, ::-1, i]
         if self.nchan == 1:
             canvas = canvas.reshape(height, width)
         return canvas

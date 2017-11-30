@@ -25,7 +25,7 @@ def temp_3Ddata(fileName):
    mykeys = f.keys()
    xtr = np.array(data) # N x X x Y x Z
 
-   if my_debug:
+   if my_gan_control_debug:
        xtr = xtr[:10000,:,:,:] #just to speed up debugging
 
    print ("xtr shape is {}".format(xtr.shape))
@@ -34,7 +34,7 @@ def temp_3Ddata(fileName):
 
    #plotting
    plt.figure()
-   if plot_matrix:
+   if my_gan_control_plot_matrix:
        plt.imshow(xtr[0, 0, :, :, 12])
    else:
        plt.plot(xtr[0, 0, :, :, 12])
@@ -43,7 +43,7 @@ def temp_3Ddata(fileName):
 
    #plt.imshow(xtr[1, 0, :, 12, :])
    plt.figure()
-   if plot_matrix:
+   if my_gan_control_plot_matrix:
        plt.imshow(xtr[0, 0, :, 12, :])
    else:
        plt.plot(xtr[0, 0, :, 12, :])
@@ -51,7 +51,7 @@ def temp_3Ddata(fileName):
    plt.close()
 
    plt.figure()
-   if plot_matrix:
+   if my_gan_control_plot_matrix:
        plt.imshow(xtr[0, 0, 12, :, :])
    else:
        plt.plot(xtr[0, 0, 12, :, :])
@@ -64,7 +64,7 @@ def temp_3Ddata(fileName):
    sumE = np.sum(aa, axis=(1))
    Epart = np.array(dtag)
 
-   if my_debug:
+   if my_gan_control_debug:
        Epart = Epart[:10000,:] #just to speed up debugging
 
    labels = np.stack((Epart[:, 1]/100, sumE), axis=1)
@@ -359,11 +359,11 @@ class my_gan_HDF5Iterator(ArrayIterator):
             mb_mean = np.mean(mini_batch_in)  # use self.be here?
             mb_max = np.max(mini_batch_in)  # all values are positive
 
-            if data_normalization == "for_tanh_output":
+            if my_gan_control_data_normalization == "for_tanh_output":
                 #for minibatch wide normalization:
                 #mini_batch_in[:] = (mini_batch_in - mb_mean)/ mb_max #rescaling into [-1,1] as it will compare with tanh output from generator Tanh
                 mini_batch_in[:] = (mini_batch_in - self.dataset_mean)/ self.dataset_max #rescaling into [-1,1] as it will compare with tanh output from generator Tanh
-            elif data_normalization == "for_logistic_output":
+            elif my_gan_control_data_normalization == "for_logistic_output":
                 mb_mean = 0.0
                 #for minibatch wide normalization:
                 #mini_batch_in[:] = mini_batch_in / mb_max #rescaling into [0,1] as it will compare with tanh output from generator Logistic

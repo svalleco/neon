@@ -815,7 +815,7 @@ class GAN(Model):
         self.total_cost[:] = self.total_cost / (self.gen_iter - last_gen_iter) # what total_cost is for?
 
         # Package a batch of data for plotting
-        self.data_batch, self.noise_batch = x, self.fprop_gen(self.z0) # how to best leverage this data with Neon native tools?
+        self.data_batch, self.noise_batch = x, self.fprop_gen(self.z0) # how to best leverage this data with Neon native tools? --> GANPlotCallback(Callback)
 
     def fprop_gen(self, x, inference=False):
         """

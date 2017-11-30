@@ -11,17 +11,17 @@ def discriminator():
     # setup weight initialization function
 
 
-    if my_xavier_discr:
+    if my_gan_control_my_xavier_discr:
         init = Xavier()
     else:
-        init = Gaussian(scale=my_gaussian_scale_init_for_discriminator)
+        init = Gaussian(scale=my_gan_control_gaussian_scale_init_for_discriminator)
 
-    if my_control_cost_function == "Wasserstein":
+    if my_gan_control_cost_function == "Wasserstein":
         Top_Layer = Linear(nout=1, name="Discriminator", init=init)
     else:
         Top_Layer = Affine(nout=1, name="Discriminator", init=init, bias=init, activation=Logistic(shortcut=False))
 
-    if discriminator_option == 1:
+    if my_gan_control_discriminator_option == 1:
         # discriminator using convolution layers
         lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
         # sigmoid = Logistic() # sigmoid activation function
@@ -56,7 +56,7 @@ def discriminator():
                    Affine(nout=1, init=init, bias=init, activation=lrelu)] #E primary
 
 
-    elif discriminator_option == 2:
+    elif my_gan_control_discriminator_option == 2:
         lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
         # sigmoid = Logistic() # sigmoid activation function
         conv1 = dict(init=init, batch_norm=False, activation=lrelu, bias=init)
@@ -91,7 +91,7 @@ def discriminator():
 
 
     else:#discriminiator using convolution layers
-        if my_control_cost_function == "Wasserstein":
+        if my_gan_control_cost_function == "Wasserstein":
             Top_Layer = Conv((4, 4, 4), name="Discriminator",
                          init=init, batch_norm=False,
                          activation=Linear(nout=1, init=init))
@@ -131,22 +131,18 @@ def discriminator():
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, name="Discriminator", activation=lrelu)]  # E primary
 
-    if my_three_lines:
-        D_layers = Tree([branch0, branch1, branch2], alphas=my_alpha)
-        print("Using Three lines with alpha = {}".format(my_alpha))
-    else:
-        D_layers = Tree([branch0, branch1, branch2], alphas=my_alpha_balanced)  # Real/Fake, SUM ECAL, E primary
+    D_layers = Tree([branch0, branch1, branch2], alphas=my_gan_control_alpha) # Real/Fake, SUM ECAL, E primary
     return D_layers
 
 
 
 
 def generator():
-    if my_xavier_gen:
+    if my_gan_control_my_xavier_gen:
         init_gen = Xavier()
     else:
-        init_gen = Gaussian(scale=my_gaussian_scale_init_for_generator)
-        init_gen_top = Gaussian(scale=(my_gaussian_scale_init_for_generator * 100))
+        init_gen = Gaussian(scale=my_gan_control_gaussian_scale_init_for_generator)
+        init_gen_top = Gaussian(scale=(my_gan_control_gaussian_scale_init_for_generator * 100))
 
     lrelu = Rectlin(slope=0.1)  # leaky relu
 
@@ -158,7 +154,7 @@ def generator():
         gen_top = lrelu
 
     relu = Rectlin(slope=0)  # relu for generator
-    if generator_option == 1:
+    if my_gan_control_generator_option == 1:
         pad1 = dict(pad_h=2, pad_w=2, pad_d=2)
         str1 = dict(str_h=2, str_w=2, str_d=2)
         conv1 = dict(init=init_gen, batch_norm=False, activation=lrelu, padding=pad1, strides=str1, bias=init_gen)
@@ -183,7 +179,7 @@ def generator():
                     Conv((3, 3, 3, 1), **conv3)
                    ]
 
-    elif generator_option == 2:
+    elif my_gan_control_generator_option == 2:
         relu = Rectlin(slope=0)  # relu for generator
         # pad1 = dict(pad_h=2, pad_w=2, pad_d=2)
         pad1 = dict(pad_h=0, pad_w=0, pad_d=0)
@@ -219,7 +215,7 @@ def generator():
                    Conv((2, 2, 10, 1), **conv5)
                    ]
 
-    else: #generator_option == 3
+    else: #my_gan_control_generator_option == 3
         # generator using "decovolution" layers
         pad_hwd_111 = dict(pad_h=1, pad_w=1, pad_d=1)
         str_hwd_222 = dict(str_h=2, str_w=2, str_d=2)

@@ -28,13 +28,14 @@ import h5py
 from neon.data import ArrayIterator
 from my_gan_costs_and_optimizer import RelativeCost, DummyOptimizer
 from my_gan_control import *
+from my_plotting_callbacks import myGANPlotCallback
 
 import logging
 
 def print_figure(my_tensor, filename, Ep):
     plt.figure()
     plt.title("Ep:{0:.2f}".format(Ep))
-    if plot_matrix:
+    if my_gan_control_plot_matrix:
         plt.imshow(my_tensor)
         plt.colorbar()
     else:
@@ -56,7 +57,7 @@ def main():
 
     data_filename = "/home/azanetti/CERNDATA/Ele_v1_1_2.h5"
     # load up the data set
-    if my_use_hdf5_iterator:
+    if my_gan_control_use_hdf5_iterator:
         print("Using my_gan_HDF5 Loader")
         train_set = my_gan_HDF5Iterator(data_filename)
         valid_set = my_gan_HDF5Iterator(data_filename) # not provided nby the hdf5 file so for now like this...
@@ -64,21 +65,6 @@ def main():
     else:
         print("Using EnergyData Loader")
         AllRealImages, AllLabels = temp_3Ddata(data_filename)
-        #X, y = temp_3Ddata("/data/svalleco/GAN/data/Ele_v1_1_2.h5")
-
-        # AllRealImages[AllRealImages < 1e-6] = 0
-        # mean = np.mean(AllRealImages, axis=0, keepdims=True)
-        # max_elem = np.max(np.abs(AllRealImages))
-        # AllRealImages = (AllRealImages - mean)/max_elem
-
-        # X_train, X_test, y_train, y_test = train_test_split(AllRealImages, AllLabels, train_size=0.9, test_size=0.1, random_state=42)
-        # print(X_train.shape, 'X train shape')
-        # print(y_train.shape, 'y train shape')
-
-        # setup datasets
-        # train_set = EnergyData(X=X_train, Y=y_train, lshape=(1, 25, 25, 25))
-        # valid_set = EnergyData(X=X_test, Y=y_test, lshape=(1, 25, 25, 25))
-
         train_set = EnergyData(X=AllRealImages, Y=AllLabels, lshape=(1, 25, 25, 25))
         valid_set = EnergyData(X=AllRealImages, Y=AllLabels, lshape=(1, 25, 25, 25))
 
@@ -111,10 +97,10 @@ def main():
     my_disc_layers = discriminator()
     layers = myGenerativeAdversarial(generator=my_gen_layers, discriminator=my_disc_layers)
 
-    if my_debug:
+    if my_gan_control_debug:
         print my_disc_layers
         print my_gen_layers
-        print("Generator option is: {}".format(generator_option))
+        print("Generator option is: {}".format(my_gan_control_generator_option))
         print 'layers defined'
         print layers
 
@@ -128,7 +114,7 @@ def main():
         my_gen_optimizer = GradientDescentMomentum(learning_rate=learning_rate, momentum_coef=0.9, gradient_clip_value = 5)
     print("Optimizer in use for Generator is: {}".format(my_gen_optimizer.get_description()))
 
-    #setup optimizer for discriminator
+    # setup optimizer for discriminator
     learning_rate = my_gan_control_LR_discriminator
     if my_gan_control_discriminator_optimizer == "Adam":
         my_discr_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
@@ -143,9 +129,9 @@ def main():
     optimizer = MultiOptimizer(mapping)
 
     # setup cost functions R/F, SUMEcal, Ep
-    if my_control_cost_function == "Wasserstein":
+    if my_gan_control_cost_function == "Wasserstein":
         my_func = "wasserstein"
-    elif my_control_cost_function == "Modified":
+    elif my_gan_control_cost_function == "Modified":
         my_func = "modified"
     else:
         my_func = "original"
@@ -156,18 +142,24 @@ def main():
         print("Using MeanSquared cost function for Auxiliary Classifiers")
     else: #RelativeCost
         cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)),  # wasserstein / modified /original
-                                GeneralizedCost(costfunc=RelativeCost()), #RelativeCost() / MeanSquared()
+                                GeneralizedCost(costfunc=RelativeCost()),
                                 GeneralizedCost(costfunc=RelativeCost())])
         print("Using RelativeCost cost function for Auxiliary Classifiers")
 
     # initialize model
     noise_dim = (latent_size,)
-    gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=my_gan_k, wgan_param_clamp=my_gan_control_param_clamp) #, wgan_param_clamp=0.9,wgan_train_sched=True) # try with k > 1 (=5)
+    gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=my_gan_control_k,
+                wgan_param_clamp=my_gan_control_param_clamp, wgan_train_sched=my_gan_control_train_schedule) #, wgan_param_clamp=0.9,wgan_train_sched=True) # try with k > 1 (=5)
 
     # configure callbacks
-    #callbacks = Callbacks(gan, eval_set=valid_set)
+    # callbacks = Callbacks(gan, eval_set=valid_set)
     callbacks = Callbacks(gan, output_file= res_dir + my_run_random_prefix + "callbacks_out_" + my_run_timestamp + '.h5')
     callbacks.add_callback(TrainMulticostCallback()) # position in the list of callbacks can be specified here. Put 0?
+    fname = os.path.splitext(os.path.basename(__file__))[0] +\
+            '_[' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + ']' + 'Andrea'
+    im_args = dict(filename=os.path.join(res_dir + my_run_random_prefix, fname), hw=25,
+               num_samples=batch_size, nchan=1, sym_range=True)
+    callbacks.add_callback(myGANPlotCallback(**im_args))
 
     #training
     print 'starting training'
@@ -179,7 +171,7 @@ def main():
 
     fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
     generator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + my_run_timestamp + '].prm'
-    discriminator_file_name = my_run_random_prefix +  os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + my_run_timestamp + '].prm'
+    discriminator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + my_run_timestamp + '].prm'
 
     my_generator = Model(gan.layers.generator)
     my_generator.save_params(generator_file_name)
