@@ -73,7 +73,7 @@ class GANPlotCallback(Callback):
         return batch
 
     def _shape_transform(self, batch):
-        assert self.nchan * self.hw * self.hw * self.hw == batch.shape[0], "wrong image size specified"
+        assert self.nchan * self.hw * self.hw == batch.shape[0], "wrong image size specified"
         assert self.num_samples <= batch.shape[1], "number of samples must not exceed batch size"
 
         nrow = int(np.ceil(np.sqrt(self.num_samples)))

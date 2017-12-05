@@ -17,6 +17,7 @@ import logging
 import numpy as np
 from PIL import Image
 from neon.callbacks.callbacks import Callback
+from my_gan_control import *
 logger = logging.getLogger(__name__)
 
 try:
@@ -73,7 +74,7 @@ class myGANPlotCallback(Callback):
         return batch
 
     def _shape_transform(self, batch):
-        assert self.nchan * self.hw * self.hw == batch.shape[0], "wrong image size specified"
+        assert self.nchan * self.hw * self.hw  * self.hw == batch.shape[0], "wrong image size specified"
         assert self.num_samples <= batch.shape[1], "number of samples must not exceed batch size"
 
         nrow = int(np.ceil(np.sqrt(self.num_samples)))
@@ -89,7 +90,7 @@ class myGANPlotCallback(Callback):
         for i in range(self.num_samples):
             irow, icol, step = i % nrow, i // nrow, self.hw + self.padding
             canvas[irow*step:irow*step+self.hw, icol*step:icol*step+self.hw, :] = \
-                batch[:, :, 12, ::-1, i]
+                batch[:, :, 12, ::-1, i] / np.max(batch[:, :, 12, ::-1, i])
         if self.nchan == 1:
             canvas = canvas.reshape(height, width)
         return canvas
@@ -108,10 +109,11 @@ class myGANPlotCallback(Callback):
         im_args = dict(interpolation="nearest", vmin=0., vmax=1.)
         if self.nchan == 1:
             im_args['cmap'] = plt.get_cmap("gray")
-        fname = self.filename+'_data_'+'{:03d}'.format(epoch)+'.png'
+        fname = self.filename + my_gan_control_run_random_prefix + '_data_'+'{:03d}'.format(epoch) + '.png'
         Image.fromarray(np.uint8(data_canvas*255)).convert('RGB').save(fname)
-        fname = self.filename+'_noise_'+'{:03d}'.format(epoch)+'.png'
+        fname = self.filename + my_gan_control_run_random_prefix + '_noise_'+'{:03d}'.format(epoch) + '.png'
         Image.fromarray(np.uint8(noise_canvas*255)).convert('RGB').save(fname)
+        #better: image = (image * 255).round().astype(np.uint8)?
 
         # plot logged WGAN costs if logged
         if model.cost.costfunc.func == 'wasserstein':
@@ -129,3 +131,105 @@ class myGANPlotCallback(Callback):
             plt.margins(0, 0, tight=True)
             plt.savefig(self.filename+'_training.png', bbox_inches='tight')
             plt.close()
+
+
+class myGANCostCallback(Callback):
+    """
+    Callback for computing average training cost periodically during training.
+    """
+    def __init__(self):
+        super(myGANCostCallback, self).__init__(epoch_freq=1)
+
+    def on_train_begin(self, callback_data, model, epochs):
+        """
+        Called when training is about to begin
+
+        Arguments:
+            callback_data (HDF5 dataset): shared data between callbacks
+            model (Model): model object
+            epochs (int): Total epochs
+        """
+        # preallocate space for the number of minibatches in the whole run
+        points = callback_data['config'].attrs['total_minibatches']
+        callback_data.create_dataset("gan/gen_iter", (points,))
+        callback_data.create_dataset("gan/cost_dis_Ep", (points,))
+        callback_data.create_dataset("gan/cost_dis_SUMEcal", (points,))
+        callback_data.create_dataset("gan/cost_gen", (points,))
+        callback_data.create_dataset("gan/cost_dis", (points,))
+
+        # clue in the data reader to use the 'minibatch' time_markers
+        callback_data['gan/gen_iter'].attrs['time_markers'] = 'minibatch'
+        callback_data['gan/cost_dis_Ep'].attrs['time_markers'] = 'minibatch'
+        callback_data['gan/cost_dis_SUMEcal'].attrs['time_markers'] = 'minibatch'
+        callback_data['gan/cost_gen'].attrs['time_markers'] = 'minibatch'
+        callback_data['gan/cost_dis'].attrs['time_markers'] = 'minibatch'
+
+    def on_minibatch_end(self, callback_data, model, epoch, minibatch):
+        """
+        Log GAN cost data. Called when minibatch is about to end
+
+        Arguments:
+            callback_data (HDF5 dataset): shared data between callbacks
+            model (Model): model object
+            epoch (int): index of current epoch
+            minibatch (int): index of minibatch that is ending
+        """
+        if model.current_batch == model.last_gen_batch and model.last_gen_batch > 0:
+            mbstart = callback_data['time_markers/minibatch'][epoch - 1] if epoch > 0 else 0
+            callback_data['gan/gen_iter'][mbstart + minibatch] = model.gen_iter
+            callback_data['gan/cost_dis'][mbstart + minibatch] = model.cost_dis[0]
+            callback_data['gan/cost_dis_Ep'][mbstart + minibatch] = model.cost_dis_Ep
+            callback_data['gan/cost_dis_SUMEcal'][mbstart + minibatch] = model.cost_dis_SUMEcal[0]
+            callback_data['gan/cost_gen'][mbstart + minibatch] = model.cost_gen[0]
+
+        if (model.current_batch + my_gan_control_data_saving_freq) % my_gan_control_data_saving_freq == 0:
+            fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), my_gan_results_dir)
+            plfname = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[
+                0] + "-" + my_gan_control_timestamp + "-" + "-" + \
+                      'Epoch {}'.format(model.epoch_index) + '_[' + 'batch_n_{}'.format(model.current_batch) + ']_GAN_COST_FUNCTIONS'
+            plfname_1 = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[
+                0] + "-" + my_gan_control_timestamp + "-" + "-" + \
+                      'Epoch {}'.format(model.epoch_index) + '_[' + 'batch_n_{}'.format(model.current_batch) + ']_GAN_AUX_FUNCTIONS'
+            plt_filename = os.path.join(fdir, plfname)
+            plt_filename_1 = os.path.join(fdir, plfname_1)
+
+            t = np.array(range(0, callback_data['config'].attrs['total_minibatches']))
+            pdisc = np.array(callback_data['gan/cost_dis'])
+            pEp = np.array(callback_data['gan/cost_dis_Ep'])
+            pSUMEcal = np.array(callback_data['gan/cost_dis_SUMEcal'])
+            pgen = np.array(callback_data['gan/cost_gen'])
+
+            interval_right = 1000 if model.current_batch < 1000 else model.current_batch
+            interval_left = 0 #if model.current_batch > 1000 else model.current_batch - 1000
+
+            plt.figure()
+            plt.title("Cost functions at iteration n.:{0:.2f}\n".format(model.current_batch))
+            leg_disc = plt.plot(t[interval_left:interval_right], pdisc[interval_left:interval_right], linestyle='None', marker='v', color='r', label=u"Disc")
+            leg_gen = plt.plot(t[interval_left:interval_right], pgen[interval_left:interval_right], linestyle='None', marker='<', color='b', label=u"Gen")
+            plt.xlabel('minibatch')
+            plt.ylabel('GAN costs')
+            plt.axis([interval_left, interval_right, 0, 5])
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(plt_filename)
+            plt.close()
+
+            plt.figure()
+            plt.title("Cost functions at iteration n.:{0:.2f}\n".format(model.current_batch))
+            leg_cost_Ep = plt.plot(t[interval_left:interval_right], pEp[interval_left:interval_right],linestyle='None', marker='v', color='g', label=u"Ep")
+            leg_cost_SUMEcal = plt.plot(t[interval_left:interval_right], pSUMEcal[interval_left:interval_right], linestyle='None', marker='<',color='y',
+                                        label=u"SUMEcal")
+            plt.xlabel('minibatch')
+            plt.ylabel('AUX costs')
+            plt.axis([interval_left, interval_right, 0, 10])
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(plt_filename_1)
+            plt.close()
+            print("\nSaved cost functions profile to {}".format(plt_filename))
+
+
+
+
+
+

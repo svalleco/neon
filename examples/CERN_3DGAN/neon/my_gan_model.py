@@ -130,7 +130,7 @@ class myGAN(Model):
         """
         if normal:
             # Note fill_normal is not deterministic
-            self.be.fill_normal(z)
+            self.be.fill_normal(z, mean=0.00311173243963, stdv=0.1) #input noise of same dimensionality of x
         else:
             z[:] = 2 * self.be.rand() - 1.
 
@@ -150,7 +150,7 @@ class myGAN(Model):
         if my_gan_control_debug:
             ztest = z.get()
 
-        # when use three lines, conditioning of inputs
+        # conditioning of inputs
         for i in range(z.shape[1]):
             z[:, i] = z[:, i] * myEnergies[i]
 
@@ -195,9 +195,9 @@ class myGAN(Model):
 
         #buffers for costs
         self.cost_dis = np.empty((1,), dtype=np.float32)
-        self.cost_dis_Ep = np.empty((1,), dtype=np.float32) #TODO review--------------
-        self.cost_dis_SUMEcal = np.empty((1,), dtype=np.float32)#TODO review--------------
-        self.cost_gen = np.empty((1,), dtype=np.float32)#TODO review--------------
+        self.cost_dis_Ep = np.empty((1,), dtype=np.float32)
+        self.cost_dis_SUMEcal = np.empty((1,), dtype=np.float32)
+        self.cost_gen = np.empty((1,), dtype=np.float32)
 
         self.current_batch = self.gen_iter = self.last_gen_batch = 0
 
@@ -213,21 +213,24 @@ class myGAN(Model):
         else:
             return self.k
 
-    def plot_partials_generations(self, Gen_output, cond_labels, prob_fake_real, Ep_estimated, SUMEcal_estimated, kind="generated"):
+    def plot_partials_generations(self, Gen_output, cond_labels, prob_fake_real, Ep_estimated, SUMEcal_estimated,\
+                                  kind="generated"):
         # setting filenames
-        fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
-        plfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + my_run_timestamp +  "-" + kind + "-" + \
-                  'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + ']'
-        h5fname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + my_run_timestamp + \
-                  'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].h5'
+        fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), my_gan_results_dir)
+        plfname = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + \
+                  my_gan_control_timestamp +  "-" + kind + "-" + 'Epoch {}'.format(self.epoch_index) + '_[' + \
+                  'batch_n_{}'.format(self.current_batch) + ']'
+        h5fname = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-" + \
+                  my_gan_control_timestamp + 'Epoch {}'.format(self.epoch_index) + '_[' + \
+                  'batch_n_{}'.format(self.current_batch) + '].h5'
         plt_filename = os.path.join(fdir, plfname)
         h5_filename = os.path.join(fdir, h5fname)
 
         # plotting
         Gen_output_3D = Gen_output.reshape((25, 25, 25, self.be.bsz))
-        my_views = [Gen_output_3D[:, 12, :, 0], Gen_output_3D[:, :, 12, 0], Gen_output_3D[12, :, :, 0]]
+        my_views = [Gen_output_3D[:, 12, :, 0], Gen_output_3D[:, :, 12, 0], Gen_output_3D[12, :, :, 0]] #12 to get the central slice of the cube
         file_name_endings = ["_xz", "_xy", "_yz"]
-        for num_pics, tens_to_pic, f_ending in zip([0, 1, 2], my_views, file_name_endings  ):
+        for num_pics, tens_to_pic, f_ending in zip([0, 1, 2], my_views, file_name_endings):
             plt.figure()
             plt.title("Ep_r:{0:.2f} R/F:{1:.2f} Ep_e:{2:.2f} Ecal_e:{3:.2f}\n".format\
                           (cond_labels[0,0], prob_fake_real[0,0], Ep_estimated[0,0], SUMEcal_estimated[0,0]))
@@ -277,7 +280,7 @@ class myGAN(Model):
             self.cost_dis_SUMEcal[:] = 0
 
             # 1 - TRAIN DISCRIMINATOR ON NOISE
-            print("\n\nRUN ID: " + my_run_random_prefix +
+            print("\n\nRUN ID: " + my_gan_control_run_random_prefix +
                   " -----> START MINIBATCH {0}\n\n---> 1 - TRAIN DISCRIMINATOR ON NOISE ".
                   format(self.current_batch) + "for the {0}-th time".format(self.current_batch))
 
@@ -475,10 +478,10 @@ class myGAN(Model):
 
             #saving params: todo: move this saving into callbacks
             if my_gan_control_save_prm:
-                fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
-                genfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + \
+                fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), my_gan_results_dir)
+                genfname = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + \
                           'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].prm'
-                discfname = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + \
+                discfname = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + \
                           'Epoch {}'.format(self.epoch_index) + '_[' + 'batch_n_{}'.format(self.current_batch) + '].prm'
                 gen_filename = os.path.join(fdir, genfname)
                 disc_filename = os.path.join(fdir, discfname)

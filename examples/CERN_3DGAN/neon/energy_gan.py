@@ -28,7 +28,7 @@ import h5py
 from neon.data import ArrayIterator
 from my_gan_costs_and_optimizer import RelativeCost, DummyOptimizer
 from my_gan_control import *
-from my_plotting_callbacks import myGANPlotCallback
+from my_plotting_callbacks import myGANPlotCallback, myGANCostCallback
 
 import logging
 
@@ -40,7 +40,7 @@ def print_figure(my_tensor, filename, Ep):
         plt.colorbar()
     else:
         plt.plot(my_tensor)
-    plt.savefig(res_dir + my_run_random_prefix + filename)
+    plt.savefig(my_gan_results_dir + my_gan_control_run_random_prefix + filename)
 
 def main():
     # my code here
@@ -83,7 +83,7 @@ def main():
     yy = Y.get()
     yy[ yy < 1e-6 ] = 0#removing non physical values
     in_batch = np.random.randint(0, batch_size)
-    lyr = np.random.randint(0, 25) # should be 12 always?
+    lyr = 12 #np.random.randint(0, 25) # should be 12 always?
     tt = tt.reshape(25, 25, 25, batch_size)
     tensor_to_print = [tt[:, lyr, :, in_batch], tt[:, :, lyr, in_batch], tt[lyr, :, :, in_batch]]
     for i in range(3):
@@ -153,26 +153,27 @@ def main():
 
     # configure callbacks
     # callbacks = Callbacks(gan, eval_set=valid_set)
-    callbacks = Callbacks(gan, output_file= res_dir + my_run_random_prefix + "callbacks_out_" + my_run_timestamp + '.h5')
+    callbacks = Callbacks(gan, output_file= my_gan_results_dir + my_gan_control_run_random_prefix + "callbacks_out_" + my_gan_control_timestamp + '.h5')
     callbacks.add_callback(TrainMulticostCallback()) # position in the list of callbacks can be specified here. Put 0?
     fname = os.path.splitext(os.path.basename(__file__))[0] +\
             '_[' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + ']' + 'Andrea'
-    im_args = dict(filename=os.path.join(res_dir + my_run_random_prefix, fname), hw=25,
+    im_args = dict(filename=os.path.join(my_gan_results_dir, fname), hw=25,
                num_samples=batch_size, nchan=1, sym_range=True)
     callbacks.add_callback(myGANPlotCallback(**im_args))
 
+    #add my callback to print cost functions DURING training
+    callbacks.add_callback(myGANCostCallback())
+
     #training
     print 'starting training'
-    gan.fit(train_set, num_epochs=nb_epochs, optimizer=optimizer,
-            cost=cost, callbacks=callbacks)
+    gan.fit(train_set, num_epochs=nb_epochs, optimizer=optimizer, cost=cost, callbacks=callbacks)
 
     # saving parameters using service function from myGan class has issues and temporarily using Model
     #gan.save_params('our_gan.prm')
 
-    fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), res_dir)
-    generator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + my_run_timestamp + '].prm'
-    discriminator_file_name = my_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + my_run_timestamp + '].prm'
-
+    fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), my_gan_results_dir)
+    generator_file_name = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + my_gan_control_timestamp + '].prm'
+    discriminator_file_name = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + my_gan_control_timestamp + '].prm'
     my_generator = Model(gan.layers.generator)
     my_generator.save_params(generator_file_name)
     my_discriminator = Model(gan.layers.discriminator)

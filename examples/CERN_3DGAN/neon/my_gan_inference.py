@@ -79,14 +79,14 @@ for b_ind in range(0, my_gan_control_batch_size):
         plt.title("Ep submitted for inference:{0:.2f} section{1}\n".format(myEnergies[b_ind], f_ending))
         plt.imshow(tens_to_pic)
         plt.colorbar()
-        plt.savefig(my_inference_dir + inf_prefix + '_batch_ind_{}_inference_out'.format(b_ind) + f_ending + '.png')
+        plt.savefig(my_gan_control_inference_dir + inf_prefix + '_batch_ind_{}_inference_out'.format(b_ind) + f_ending + '.png')
         plt.close()
 
-print(gen_out.shape, 'generator output files saved to dir {} with prefix: {}'.format(my_inference_dir, inf_prefix))
+print(gen_out.shape, 'generator output files saved to dir {} with prefix: {}'.format(my_gan_control_inference_dir, inf_prefix))
 
-h5f = h5py.File(my_inference_dir + 'output_data.h5', 'w')
+h5f = h5py.File(my_gan_control_inference_dir + 'output_data.h5', 'w')
 h5f.create_dataset('dataset_1', data=gen_out)
-print(" files were saved in {}  \n".format(my_inference_dir))
+print(" files were saved in {}  \n".format(my_gan_control_inference_dir))
 
 # #test
 # import os

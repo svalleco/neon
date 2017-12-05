@@ -783,8 +783,6 @@ class GAN(Model):
             # keep GAN cost values for the current minibatch
             # abuses get_cost(y,t) using y_noise as the "target"
             self.cost_dis[:] = self.cost.get_cost(y_data, y_temp, cost_type='dis')
-            #why computing cost here? no need... as it is recomputed at #783...
-            # just to have it in case WGANs?
 
             # train generator
             if self.current_batch == self.last_gen_batch + self.get_k(self.gen_iter):
