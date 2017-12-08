@@ -3,7 +3,6 @@ import time
 import os, errno
 from shutil import copyfile, copy2
 
-'''test dropout .75, 256 affine layer before top layer the discriminator'''
 # control parameters of my_gan
 #debugging an printing
 my_gan_control_debug = True
@@ -17,7 +16,7 @@ my_gan_control_print_image_of_training_on_data = False
 
 #data mng
 my_gan_control_use_hdf5_iterator = True
-my_gan_control_data_saving_freq = 60 #this must be a multiple of my_gan_control_k
+my_gan_control_data_saving_freq = 50 #this must be a multiple of my_gan_control_k
 
 
 #Initializations
@@ -30,7 +29,7 @@ my_gan_control_gaussian_scale_init_for_discriminator = 0.1
 #duration and batchsize, latent size
 my_gan_control_batch_size = 64
 my_gan_control_nb_epochs = 50 # generator trainings
-my_gan_control_latent_size = 1024 # should I increase this?
+my_gan_control_latent_size = 256 # should I increase this?
 
 #optimizer and cost function
 my_gan_control_LR_generator = 1e-4 #not used for RMSProp   should I reduce these LRs?
@@ -56,18 +55,18 @@ my_gan_control_param_clamp = None #None, 1.0, 0.01
 
 
 #model configuration
-my_gan_control_alpha = (.92, 0.02, 0.02) # : R/F, SUMEcal, Ep
+my_gan_control_alpha = (1.0, 0.02, 0.02) # : R/F, SUMEcal, Ep
 my_gan_control_lshape = (1, 25, 25, 25)
-my_gan_control_discriminator_option = 1  # 1 or 2 ; 3 = all convolution
+my_gan_control_discriminator_option = 2  # 1 or 2 ; 3 = all convolution
 my_gan_control_generator_option = 2 # 1 or 2, 3 = all deconvolution
 my_gan_control_data_normalization = "no"# "for_tanh_output" "for_logistic_output"; else or nothing for relu (as output layer of generator)
-my_gan_control_gen_top = "tanh" #"tanh", "logistic", anything else will be lrelu defined in the generator definition todo: in energy_dataset review the mean computation!
-my_gan_control_k = 3 #>0 should I increase this?
-my_gan_control_gen_times = 1 #2 it was as in Keras
+my_gan_control_gen_top = "lrelu" #"tanh", "logistic", "lrelu" anything else will be Relu defined in the generator definition todo: in energy_dataset review the mean computation!
+my_gan_control_k = 1 #>0 should I increase this?
+my_gan_control_gen_times = 2 #2 it was as in Keras
 my_gan_contol_train_gen = True
 my_gan_control_trick = True #enabling backprop on generator making discriminator think that is data: trick as in Keras implementation??
 my_gan_control_inference_only = False #CHANGE IT accordingly!
-my_gan_control_drop_out_rate = 0.9
+my_gan_control_drop_out_rate = 0.8
 
 # settings for inference only
 if my_gan_control_inference_only:

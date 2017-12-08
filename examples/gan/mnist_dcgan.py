@@ -32,7 +32,7 @@ from neon.util.argparser import NeonArgparser
 from neon.util.persist import ensure_dirs_exist
 
 # parse the command line arguments
-parser = NeonArgparser(__doc__)
+# parser = NeonArgparser(__doc__)
 parser = NeonArgparser(__doc__, default_overrides={'epochs': 32, 'rng_seed': 0, 'batch_size': 64})
 parser.add_argument('--kbatch', type=int, default=1,
                     help='number of data batches per noise batch in training')

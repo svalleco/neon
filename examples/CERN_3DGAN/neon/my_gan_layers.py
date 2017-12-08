@@ -8,12 +8,8 @@ from my_gan_control import *
 
 
 def discriminator():
-    # setup weight initialization function
-
-
     if my_gan_control_my_xavier_discr:
         init = Xavier()
-        #init = Kaiming()
     else:
         init = Gaussian(scale=my_gan_control_gaussian_scale_init_for_discriminator)
 
@@ -23,16 +19,14 @@ def discriminator():
         Top_Layer = Affine(nout=1, name="Discriminator", init=init, bias=init, activation=Logistic(shortcut=False))
 
     if my_gan_control_discriminator_option == 1:
-        # discriminator using convolution layers
         lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
-        # sigmoid = Logistic() # sigmoid activation function
         conv1 = dict(init=init, batch_norm=False, activation=lrelu, bias=init)
         conv2 = dict(init=init, batch_norm=False, activation=lrelu, padding=2, bias=init)
         conv3 = dict(init=init, batch_norm=False, activation=lrelu, padding=1, bias=init)
         b1 = BranchNode("b1")
         b2 = BranchNode("b2")
         branch0 = [b1,
-                    Conv((5, 5, 5, 8), name="Discriminator", **conv1), #21x21x21
+                    Conv((5, 5, 5, 32), name="Discriminator", **conv1), #21x21x21
                     Dropout(keep=my_gan_control_drop_out_rate),
                     Conv((5, 5, 5, 32), name="Discriminator", **conv2), #21x21x21
                     BatchNorm(),
@@ -46,8 +40,8 @@ def discriminator():
                     #Pooling((2, 2, 2)),
                     Affine(1024, init=init, name="Discriminator", activation=lrelu),
                     BatchNorm(),
-                    Affine(1024, init=init, name="Discriminator", activation=lrelu),
-                    BatchNorm(),
+                    # Affine(1024, init=init, name="Discriminator", activation=lrelu),
+                    # BatchNorm(),
                     b2,
                     Top_Layer
                     ] #real/fake
@@ -55,7 +49,6 @@ def discriminator():
                    Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")] #SUM ECAL
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, activation=lrelu)] #E primary
-
 
     elif my_gan_control_discriminator_option == 2:
         lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
@@ -77,9 +70,9 @@ def discriminator():
                    Conv((5, 5, 5, 8), name="Discriminator", **conv3),
                    BatchNorm(),
                    Dropout(keep=my_gan_control_drop_out_rate),
-                   Pooling((2, 2, 2)),
-                   Affine(1024, init=init, activation=lrelu),
-                   BatchNorm(),
+                   Pooling((2, 2, 2), op='avg'),
+                   # Affine(1024, init=init, activation=lrelu),
+                   # BatchNorm(),
                    # Affine(1024, init=init, activation=lrelu),
                    # BatchNorm(),
                    b2,
@@ -89,7 +82,6 @@ def discriminator():
                    Linear(nout=1, init=Constant(val=1.0), name="NotOptimizeLinear")]  # SUM ECAL
         branch2 = [b2,
                    Affine(nout=1, init=init, bias=init, name="Discriminator",  activation=lrelu)]  # E primary
-
 
     else:#discriminiator using convolution layers
         if my_gan_control_cost_function == "Wasserstein":
@@ -140,9 +132,6 @@ def generator():
     if my_gan_control_my_xavier_gen:
         init_gen = Xavier()
         init_gen_top = Xavier()
-        # init = Kaiming()
-        # init_gen = Kaiming()
-        # init_gen_top = Kaiming()
     else:
         init_gen = Gaussian(scale=my_gan_control_gaussian_scale_init_for_generator)
         init_gen_top = Gaussian(scale=(my_gan_control_gaussian_scale_init_for_generator_top_layer))
@@ -153,8 +142,10 @@ def generator():
         gen_top = Tanh()
     elif my_gan_control_gen_top == "logistic":
         gen_top = Logistic(shortcut=False)
-    else:
+    elif my_gan_control_gen_top == "lrelu":
         gen_top = lrelu
+    else:
+        gen_top = Rectlin()
 
     relu = Rectlin(slope=0)  # relu for generator
     if my_gan_control_generator_option == 1:
@@ -224,7 +215,6 @@ def generator():
                    ]
 
     else: #my_gan_control_generator_option == 3
-        # generator using "decovolution" layers
         pad_hwd_111 = dict(pad_h=1, pad_w=1, pad_d=1)
         str_hwd_222 = dict(str_h=2, str_w=2, str_d=2)
         relu = Rectlin(slope=0)  # relu for generator

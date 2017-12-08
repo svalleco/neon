@@ -90,7 +90,7 @@ class myGANPlotCallback(Callback):
         for i in range(self.num_samples):
             irow, icol, step = i % nrow, i // nrow, self.hw + self.padding
             canvas[irow*step:irow*step+self.hw, icol*step:icol*step+self.hw, :] = \
-                batch[:, :, 12, ::-1, i] / np.max(batch[:, :, 12, ::-1, i])
+                batch[:, :, 12, ::-1, i] / np.amax(batch[:, :, 12, ::-1, i])
         if self.nchan == 1:
             canvas = canvas.reshape(height, width)
         return canvas
@@ -203,7 +203,7 @@ class myGANCostCallback(Callback):
             interval_left = 0 #if model.current_batch > 1000 else model.current_batch - 1000
 
             plt.figure()
-            plt.title("Cost functions at iteration n.:{0:.2f}\n".format(model.current_batch))
+            plt.title("Cost functions at iteration n.:{0:d}\n".format(model.current_batch))
             leg_disc = plt.plot(t[interval_left:interval_right], pdisc[interval_left:interval_right], linestyle='None', marker='v', color='r', label=u"Disc")
             leg_gen = plt.plot(t[interval_left:interval_right], pgen[interval_left:interval_right], linestyle='None', marker='<', color='b', label=u"Gen")
             plt.xlabel('minibatch')
@@ -215,13 +215,13 @@ class myGANCostCallback(Callback):
             plt.close()
 
             plt.figure()
-            plt.title("Cost functions at iteration n.:{0:.2f}\n".format(model.current_batch))
+            plt.title("Cost functions at iteration n.:{0:d}\n".format(model.current_batch))
             leg_cost_Ep = plt.plot(t[interval_left:interval_right], pEp[interval_left:interval_right],linestyle='None', marker='v', color='g', label=u"Ep")
             leg_cost_SUMEcal = plt.plot(t[interval_left:interval_right], pSUMEcal[interval_left:interval_right], linestyle='None', marker='<',color='y',
                                         label=u"SUMEcal")
             plt.xlabel('minibatch')
             plt.ylabel('AUX costs')
-            plt.axis([interval_left, interval_right, 0, 10])
+            plt.axis([interval_left, interval_right, 0, 5])
             plt.legend()
             plt.grid(True)
             plt.savefig(plt_filename_1)
