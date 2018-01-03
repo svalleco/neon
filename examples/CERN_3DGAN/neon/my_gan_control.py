@@ -4,6 +4,9 @@ import os, errno
 from shutil import copyfile, copy2
 
 # control parameters of my_gan
+
+#remote server
+my_gan_control_local_gdansk = False
 #debugging an printing
 my_gan_control_debug = True
 my_gan_control_plot_matrix = True
@@ -16,7 +19,7 @@ my_gan_control_print_image_of_training_on_data = False
 
 #data mng
 my_gan_control_use_hdf5_iterator = True
-my_gan_control_data_saving_freq = 50 #this must be a multiple of my_gan_control_k
+my_gan_control_data_saving_freq = 100 #this must be a multiple of my_gan_control_k
 
 
 #Initializations
@@ -24,20 +27,20 @@ my_gan_control_my_xavier_discr = False # with True will lead to NANs in discrimi
 my_gan_control_my_xavier_gen = False
 my_gan_control_gaussian_scale_init_for_generator = 0.001
 my_gan_control_gaussian_scale_init_for_generator_top_layer = my_gan_control_gaussian_scale_init_for_generator * 0.01
-my_gan_control_gaussian_scale_init_for_discriminator = 0.1
+my_gan_control_gaussian_scale_init_for_discriminator = 0.05
 
 #duration and batchsize, latent size
-my_gan_control_batch_size = 64
+my_gan_control_batch_size = 128
 my_gan_control_nb_epochs = 50 # generator trainings
-my_gan_control_latent_size = 256 # should I increase this?
+my_gan_control_latent_size = 200 # should I increase this?
 
 #optimizer and cost function
-my_gan_control_LR_generator = 1e-4 #not used for RMSProp   should I reduce these LRs?
-my_gan_control_LR_discriminator = 1e-4 #not used for RMSProp
-my_gan_control_relative_vs_meansquared = "MeanSquared" #MeanSquared vs RelativeCost
-my_gan_control_generator_optimizer = "Adam" # Adam; RMSProp; anything else it will set to GradientDescent
-my_gan_control_discriminator_optimizer = "Adam" # Adam; RMSProp; anything else it will set to GradientDescent
-my_gan_control_cost_function = "Modified" #  Wasserstein, Modified, Original
+my_gan_control_LR_generator = 5e-5 #
+my_gan_control_LR_discriminator = 5e-5 #
+my_gan_control_relative_vs_meansquared = "RelativeCost" #MeanSquared vs RelativeCost
+my_gan_control_generator_optimizer = "RMSProp" # Adam; RMSProp; anything else it will set to GradientDescent
+my_gan_control_discriminator_optimizer = "RMSProp" # Adam; RMSProp; anything else it will set to GradientDescent
+my_gan_control_cost_function = "Wasserstein" #  Wasserstein, Modified, Original
 # with Wasserstein on cost displayed is weird and bouncing from negative to positive; review gradient clipping;
 # check why it is so small; learning happen however.
 # TODO indeed: also wgan_param_clamp must be enabled by this set to Wasserstein
@@ -50,8 +53,8 @@ model, cost = create_model(dis_model=args.dmodel, gen_model=args.gmodel,
                            batch_norm=True, dis_iters=5,
                            wgan_param_clamp=0.01, wgan_train_sched=True
 '''
-my_gan_control_train_schedule = False #
-my_gan_control_param_clamp = None #None, 1.0, 0.01
+my_gan_control_train_schedule = True # This causes Generator to be trained every 100 iterations for the Discriminator and k seems to be ignored if this is true
+my_gan_control_param_clamp = 0.01 #None, 1.0, 0.01
 
 
 #model configuration
@@ -61,9 +64,9 @@ my_gan_control_discriminator_option = 2  # 1 or 2 ; 3 = all convolution
 my_gan_control_generator_option = 2 # 1 or 2, 3 = all deconvolution
 my_gan_control_data_normalization = "no"# "for_tanh_output" "for_logistic_output"; else or nothing for relu (as output layer of generator)
 my_gan_control_gen_top = "lrelu" #"tanh", "logistic", "lrelu" anything else will be Relu defined in the generator definition todo: in energy_dataset review the mean computation!
-my_gan_control_k = 1 #>0 should I increase this?
-my_gan_control_gen_times = 2 #2 it was as in Keras
-my_gan_contol_train_gen = True
+my_gan_control_k = 5 #>0 should I increase this?
+my_gan_control_gen_times = 1 #2 it was as in Keras
+my_gan_control_train_gen = True
 my_gan_control_trick = True #enabling backprop on generator making discriminator think that is data: trick as in Keras implementation??
 my_gan_control_inference_only = False #CHANGE IT accordingly!
 my_gan_control_drop_out_rate = 0.8

@@ -55,7 +55,7 @@ def main():
     nb_epochs = my_gan_control_nb_epochs
     latent_size = my_gan_control_latent_size
 
-    data_filename = "/home/azanetti/CERNDATA/Ele_v1_1_2.h5"
+    data_filename = "/home/azanetti/CERNDATA/Ele_v1_1_2.h5" if my_gan_control_local_gdansk else "/nfs/site/home/azanetti/CERNDATA/Ele_v1_1_2.h5"
     # load up the data set
     if my_gan_control_use_hdf5_iterator:
         print("Using my_gan_HDF5 Loader")
@@ -81,7 +81,7 @@ def main():
     filename_list = ['example_from_train_set_img_0_xz.png', 'example_from_train_set_img_0_xy.png', 'example_from_train_set_img_0_yz.png']
     tt = X.get()
     yy = Y.get()
-    yy[ yy < 1e-6 ] = 0#removing non physical values
+    yy[yy < 1e-6] = 0#removing non physical values
     in_batch = np.random.randint(0, batch_size)
     lyr = 12 #np.random.randint(0, 25) # should be 12 always?
     tt = tt.reshape(25, 25, 25, batch_size)
@@ -109,7 +109,7 @@ def main():
     if my_gan_control_generator_optimizer == "Adam":
         my_gen_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
     elif my_gan_control_generator_optimizer == "RMSProp":
-        my_gen_optimizer = RMSProp() #learning_rate=learning_rate)
+        my_gen_optimizer = RMSProp(learning_rate=learning_rate)
     else:
         my_gen_optimizer = GradientDescentMomentum(learning_rate=learning_rate, momentum_coef=0.9, gradient_clip_value = 5)
     print("Optimizer in use for Generator is: {}".format(my_gen_optimizer.get_description()))
@@ -119,7 +119,7 @@ def main():
     if my_gan_control_discriminator_optimizer == "Adam":
         my_discr_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
     elif my_gan_control_discriminator_optimizer == "RMSProp":
-        my_discr_optimizer = RMSProp()  # learning_rate=learning_rate)
+        my_discr_optimizer = RMSProp(learning_rate=learning_rate)  # learning_rate=learning_rate)
     else:
         my_discr_optimizer = GradientDescentMomentum(learning_rate=learning_rate, momentum_coef=0.9, gradient_clip_value=5)
     print("Optimizer in use for Discriminator is: {}".format(my_discr_optimizer.get_description()))
@@ -140,7 +140,7 @@ def main():
                             GeneralizedCost(costfunc=MeanSquared()),
                             GeneralizedCost(costfunc=MeanSquared())])
         print("Using MeanSquared cost function for Auxiliary Classifiers")
-    else: #RelativeCost
+    else:
         cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)),  # wasserstein / modified /original
                                 GeneralizedCost(costfunc=RelativeCost()),
                                 GeneralizedCost(costfunc=RelativeCost())])

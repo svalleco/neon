@@ -275,6 +275,7 @@ class myGAN(Model):
             if self.wgan_param_clamp:
                 self.clip_param_in_layers(self.layers.discriminator.layers_to_optimize,
                                           self.wgan_param_clamp)
+
             # prepare buffers
             self.cost_dis_Ep[:] = 0
             self.cost_dis_SUMEcal[:] = 0
@@ -391,8 +392,8 @@ class myGAN(Model):
                 #self.cost_gen[:] = self.cost.costs[0].get_cost(y_data, y_temp, cost_type='gen')
 
             # 3 - TRAIN GENERATOR
-            if my_gan_contol_train_gen:
-                if self.current_batch == 0 or self.current_batch == self.last_gen_batch + self.get_k(self.gen_iter):
+            if my_gan_control_train_gen:
+                if self.current_batch == self.last_gen_batch + self.get_k(self.gen_iter):
                     print("---> 3 - TRAIN GENERATOR {}-th time".format(self.gen_iter))
 
                     # gradient accumulation flag off for generator
