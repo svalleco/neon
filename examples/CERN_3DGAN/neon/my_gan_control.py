@@ -31,8 +31,8 @@ my_gan_control_gaussian_scale_init_for_discriminator = 0.05
 
 #duration and batchsize, latent size
 my_gan_control_batch_size = 128
-my_gan_control_nb_epochs = 50 # generator trainings
-my_gan_control_latent_size = 200 # should I increase this?
+my_gan_control_nb_epochs = 70 # generator trainings
+my_gan_control_latent_size = 1024 # should I increase this?
 
 #optimizer and cost function
 my_gan_control_LR_generator = 5e-5 #
@@ -40,27 +40,17 @@ my_gan_control_LR_discriminator = 5e-5 #
 my_gan_control_relative_vs_meansquared = "RelativeCost" #MeanSquared vs RelativeCost
 my_gan_control_generator_optimizer = "RMSProp" # Adam; RMSProp; anything else it will set to GradientDescent
 my_gan_control_discriminator_optimizer = "RMSProp" # Adam; RMSProp; anything else it will set to GradientDescent
-my_gan_control_cost_function = "Wasserstein" #  Wasserstein, Modified, Original
+my_gan_control_cost_function = "Modified" #  Wasserstein, Modified, Original
 # with Wasserstein on cost displayed is weird and bouncing from negative to positive; review gradient clipping;
 # check why it is so small; learning happen however.
 # TODO indeed: also wgan_param_clamp must be enabled by this set to Wasserstein
-'''
-model, cost = create_model(dis_model=args.dmodel, gen_model=args.gmodel,
-                           cost_type='wasserstein', noise_type='normal',
-                           im_size=32, n_chan=1, n_noise=128,
-                           n_gen_ftr=args.n_gen_ftr, n_dis_ftr=args.n_dis_ftr,
-                           depth=4, n_extra_layers=4,
-                           batch_norm=True, dis_iters=5,
-                           wgan_param_clamp=0.01, wgan_train_sched=True
-'''
-my_gan_control_train_schedule = True # This causes Generator to be trained every 100 iterations for the Discriminator and k seems to be ignored if this is true
-my_gan_control_param_clamp = 0.01 #None, 1.0, 0.01
-
+my_gan_control_train_schedule = False # This causes Generator to be trained every 100 iterations for the Discriminator and k seems to be ignored if this is true
+my_gan_control_param_clamp = None #None, 1.0, 0.01
 
 #model configuration
-my_gan_control_alpha = (1.0, 0.02, 0.02) # : R/F, SUMEcal, Ep
+my_gan_control_alpha = (1.0, 0.02, 0.05) # : R/F, SUMEcal, Ep
 my_gan_control_lshape = (1, 25, 25, 25)
-my_gan_control_discriminator_option = 2  # 1 or 2 ; 3 = all convolution
+my_gan_control_discriminator_option = 1  # 1 or 2 ; 3 = all convolution
 my_gan_control_generator_option = 2 # 1 or 2, 3 = all deconvolution
 my_gan_control_data_normalization = "no"# "for_tanh_output" "for_logistic_output"; else or nothing for relu (as output layer of generator)
 my_gan_control_gen_top = "lrelu" #"tanh", "logistic", "lrelu" anything else will be Relu defined in the generator definition todo: in energy_dataset review the mean computation!

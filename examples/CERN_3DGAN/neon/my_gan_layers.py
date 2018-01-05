@@ -8,6 +8,7 @@ from my_gan_control import *
 
 
 def discriminator():
+    lrelu = Rectlin(slope=0.01)  # leaky relu for discriminator
     if my_gan_control_my_xavier_discr:
         init = Xavier()
     else:
@@ -19,7 +20,6 @@ def discriminator():
         Top_Layer = Affine(nout=1, name="Discriminator", init=init, bias=init, activation=Logistic(shortcut=False))
 
     if my_gan_control_discriminator_option == 1:
-        lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
         conv1 = dict(init=init, batch_norm=False, activation=lrelu, bias=init)
         conv2 = dict(init=init, batch_norm=False, activation=lrelu, padding=2, bias=init)
         conv3 = dict(init=init, batch_norm=False, activation=lrelu, padding=1, bias=init)
@@ -37,7 +37,7 @@ def discriminator():
                     Conv((5, 5, 5, 32), name="Discriminator", **conv3), #19x19x19
                     BatchNorm(),
                     Dropout(keep=my_gan_control_drop_out_rate),
-                    #Pooling((2, 2, 2)),
+                    Pooling((2, 2, 2), op='avg'),
                     Affine(1024, init=init, name="Discriminator", activation=lrelu),
                     BatchNorm(),
                     # Affine(1024, init=init, name="Discriminator", activation=lrelu),
@@ -51,7 +51,6 @@ def discriminator():
                    Affine(nout=1, init=init, bias=init, activation=lrelu)] #E primary
 
     elif my_gan_control_discriminator_option == 2:
-        lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
         # sigmoid = Logistic() # sigmoid activation function
         conv1 = dict(init=init, batch_norm=False, activation=lrelu, bias=init)
         conv2 = dict(init=init, batch_norm=False, activation=lrelu, padding=2, bias=init)
@@ -95,7 +94,6 @@ def discriminator():
 
         pad_hwd_111 = dict(pad_h=1, pad_w=1, pad_d=1)
         str_hwd_222 = dict(str_h=2, str_w=2, str_d=2)
-        lrelu = Rectlin(slope=0.1)  # leaky relu for discriminator
         convp1_l1 = dict(init=init, batch_norm=False, activation=lrelu, padding=pad_hwd_111)
         convp1 = dict(init=init, batch_norm=True, activation=lrelu, padding=pad_hwd_111)
         convp1s2 = dict(init=init, batch_norm=True, activation=lrelu, padding=pad_hwd_111, strides=str_hwd_222)
@@ -129,14 +127,14 @@ def discriminator():
 
 
 def generator():
+    lrelu = Rectlin(slope=0.01)  # leaky relu
+    relu = Rectlin(slope=0)  # relu for generator
     if my_gan_control_my_xavier_gen:
         init_gen = Xavier()
         init_gen_top = Xavier()
     else:
         init_gen = Gaussian(scale=my_gan_control_gaussian_scale_init_for_generator)
         init_gen_top = Gaussian(scale=(my_gan_control_gaussian_scale_init_for_generator_top_layer))
-
-    lrelu = Rectlin(slope=0.1)  # leaky relu
 
     if my_gan_control_gen_top == "tanh":
         gen_top = Tanh()
@@ -147,7 +145,6 @@ def generator():
     else:
         gen_top = Rectlin()
 
-    relu = Rectlin(slope=0)  # relu for generator
     if my_gan_control_generator_option == 1:
         pad1 = dict(pad_h=2, pad_w=2, pad_d=2)
         str1 = dict(str_h=2, str_w=2, str_d=2)
@@ -174,8 +171,6 @@ def generator():
                    ]
 
     elif my_gan_control_generator_option == 2:
-        relu = Rectlin(slope=0)  # relu for generator
-
         # pad1 = dict(pad_h=2, pad_w=2, pad_d=2)
         pad1 = dict(pad_h=0, pad_w=0, pad_d=0)
         # str1 = dict(str_h=2, str_w=2, str_d=2)
