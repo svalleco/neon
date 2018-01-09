@@ -6,70 +6,70 @@ from shutil import copyfile, copy2
 # control parameters of my_gan
 
 #remote server
-my_gan_control_local_gdansk = False
+mgc_local_gdansk = False
 #debugging an printing
-my_gan_control_debug = True
-my_gan_control_plot_matrix = True
-my_gan_control_print_tensor_examples = False
-my_gan_control_compute_all_costs = True
-my_gan_control_save_training_progress = False #hdf files
-my_gan_control_save_prm = False #prm files
-my_gan_control_feed_dummy_data = "no" #ones, noise
-my_gan_control_print_image_of_training_on_data = False
+mgc_debug = True
+mgc_plot_matrix = True
+mgc_print_tensor_examples = False
+mgc_compute_all_costs = True
+mgc_save_training_progress = False  # hdf files
+mgc_save_prm = False  # prm files
+mgc_feed_dummy_data = "no"  # ones, noise
+mgc_print_image_of_training_on_data = False
 
 #data mng
-my_gan_control_use_hdf5_iterator = True
-my_gan_control_data_saving_freq = 100 #this must be a multiple of my_gan_control_k
+mgc_use_hdf5_iterator = True
+mgc_data_saving_freq = 100 #this must be a multiple of mgc_k
 
 
 #Initializations
-my_gan_control_my_xavier_discr = False # with True will lead to NANs in discriminator fake/real output. Why?
-my_gan_control_my_xavier_gen = False
-my_gan_control_gaussian_scale_init_for_generator = 0.001
-my_gan_control_gaussian_scale_init_for_generator_top_layer = my_gan_control_gaussian_scale_init_for_generator * 0.01
-my_gan_control_gaussian_scale_init_for_discriminator = 0.05
+mgc_my_xavier_discr = False  # with True for dicriminator leads to NANs in discriminator fake/real output. Why?
+mgc_my_xavier_gen = False
+mgc_gaussian_scale_init_for_generator = 0.001
+mgc_gaussian_scale_init_for_generator_top_layer = mgc_gaussian_scale_init_for_generator * 0.01
+mgc_gaussian_scale_init_for_discriminator = 0.05
 
 #duration and batchsize, latent size
-my_gan_control_batch_size = 128
-my_gan_control_nb_epochs = 70 # generator trainings
-my_gan_control_latent_size = 1024 # should I increase this?
+mgc_batch_size = 128
+mgc_nb_epochs = 70  # generator trainings
+mgc_latent_size = 1024  # should I increase this?
 
 #optimizer and cost function
-my_gan_control_LR_generator = 5e-5 #
-my_gan_control_LR_discriminator = 5e-5 #
-my_gan_control_relative_vs_meansquared = "RelativeCost" #MeanSquared vs RelativeCost
-my_gan_control_generator_optimizer = "RMSProp" # Adam; RMSProp; anything else it will set to GradientDescent
-my_gan_control_discriminator_optimizer = "RMSProp" # Adam; RMSProp; anything else it will set to GradientDescent
-my_gan_control_cost_function = "Modified" #  Wasserstein, Modified, Original
+mgc_LR_generator = 5e-5 #
+mgc_LR_discriminator = 5e-5 #
+mgc_relative_vs_meansquared = "RelativeCost"  # MeanSquared vs RelativeCost
+mgc_generator_optimizer = "RMSProp"  # Adam; RMSProp; anything else it will set to GradientDescent
+mgc_discriminator_optimizer = "RMSProp"  # Adam; RMSProp; anything else it will set to GradientDescent
+mgc_cost_function = "Original"  # Wasserstein, Modified, Original
 # with Wasserstein on cost displayed is weird and bouncing from negative to positive; review gradient clipping;
 # check why it is so small; learning happen however.
 # TODO indeed: also wgan_param_clamp must be enabled by this set to Wasserstein
-my_gan_control_train_schedule = False # This causes Generator to be trained every 100 iterations for the Discriminator and k seems to be ignored if this is true
-my_gan_control_param_clamp = None #None, 1.0, 0.01
+mgc_train_schedule = False  # This causes Generator to be trained every 100 iterations for the Discriminator and k seems to be ignored if this is true
+mgc_param_clamp = None  # None, 1.0, 0.01
 
 #model configuration
-my_gan_control_alpha = (1.0, 0.02, 0.05) # : R/F, SUMEcal, Ep
-my_gan_control_lshape = (1, 25, 25, 25)
-my_gan_control_discriminator_option = 1  # 1 or 2 ; 3 = all convolution
-my_gan_control_generator_option = 2 # 1 or 2, 3 = all deconvolution
-my_gan_control_data_normalization = "no"# "for_tanh_output" "for_logistic_output"; else or nothing for relu (as output layer of generator)
-my_gan_control_gen_top = "lrelu" #"tanh", "logistic", "lrelu" anything else will be Relu defined in the generator definition todo: in energy_dataset review the mean computation!
-my_gan_control_k = 5 #>0 should I increase this?
-my_gan_control_gen_times = 1 #2 it was as in Keras
-my_gan_control_train_gen = True
-my_gan_control_trick = True #enabling backprop on generator making discriminator think that is data: trick as in Keras implementation??
-my_gan_control_inference_only = False #CHANGE IT accordingly!
-my_gan_control_drop_out_rate = 0.8
+mgc_alpha = (1.0, 0.02, 0.05) # : R/F, SUMEcal, Ep
+mgc_lshape = (1, 25, 25, 25)
+mgc_discriminator_option = 1  # 1 or 2 ; 3 = all convolution
+mgc_generator_option = 2  # 1 or 2, 3 = all deconvolution
+mgc_data_normalization = "no" #  "for_tanh_output" "for_logistic_output"; else or nothing for relu (as output layer of generator)
+mgc_gen_top = "lrelu" #"tanh", "logistic", "lrelu" anything else will be Relu defined in the generator definition todo: in energy_dataset review the mean computation!
+mgc_k = 5  # >0 should I increase this?
+mgc_gen_times = 1  # 2 it was as in Keras
+mgc_train_gen = True
+mgc_trick = True  # enabling backprop on generator making discriminator think that is data: trick as in Keras implementation??
+mgc_inference_only = False  # CHANGE IT accordingly!
+mgc_drop_out_rate = 0.8
 
 # settings for inference only
-if my_gan_control_inference_only:
-    my_gan_control_inference_dir = "inference_results/"
+if mgc_inference_only:
+    mgc_inference_dir = "inference_results/"
 else:
     # settings for training
-    my_gan_control_run_random_prefix = str(int(np.random.randint(1,10000000, 1))) + "_"
-    print("################## SIMULATION PREFIX FOR OUTPUT IDENTIFICATION IS: {} ####################".format(my_gan_control_run_random_prefix))
-    my_gan_control_timestamp = time.strftime("%d-%m-%Y-%H-%M")
-    my_gan_results_dir = "results_{}_{}/".format(my_gan_control_timestamp, my_gan_control_run_random_prefix)
+    mgc_run_random_prefix = str(int(np.random.randint(1,10000000, 1))) + "_"
+    print("################## SIMULATION PREFIX FOR OUTPUT IDENTIFICATION IS: {} ####################".format(mgc_run_random_prefix))
+    mgc_timestamp = time.strftime("%d-%m-%Y-%H-%M")
+    my_gan_results_dir = "results_{}_{}/".format(mgc_timestamp, mgc_run_random_prefix)
     try:
         os.makedirs(my_gan_results_dir)
         print("Created directory {}".format(my_gan_results_dir))
@@ -78,12 +78,12 @@ else:
             raise
 
     #copy this file into results dir as to track how they were obtained
-    my_gan_control_this_file_name = "my_gan_control.py" #os.path.basename(__file__)
-    my_gan_control_destination_file_name = my_gan_results_dir + my_gan_control_run_random_prefix +  my_gan_control_this_file_name
-    copyfile( my_gan_control_this_file_name,  my_gan_control_destination_file_name)
-    my_gan_control_layer_file_name = "my_gan_layers.py"
-    my_gan_control_destination_file_name = my_gan_results_dir + my_gan_control_run_random_prefix +  my_gan_control_layer_file_name
-    copyfile( my_gan_control_layer_file_name,  my_gan_control_destination_file_name )
+    mgc_this_file_name = "my_gan_control.py" #os.path.basename(__file__)
+    mgc_destination_file_name = my_gan_results_dir + mgc_run_random_prefix +  mgc_this_file_name
+    copyfile( mgc_this_file_name,  mgc_destination_file_name)
+    mgc_layer_file_name = "my_gan_layers.py"
+    mgc_destination_file_name = my_gan_results_dir + mgc_run_random_prefix +  mgc_layer_file_name
+    copyfile( mgc_layer_file_name,  mgc_destination_file_name )
 
 
 

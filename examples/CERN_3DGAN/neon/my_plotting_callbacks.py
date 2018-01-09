@@ -109,9 +109,9 @@ class myGANPlotCallback(Callback):
         im_args = dict(interpolation="nearest", vmin=0., vmax=1.)
         if self.nchan == 1:
             im_args['cmap'] = plt.get_cmap("gray")
-        fname = self.filename + my_gan_control_run_random_prefix + '_data_'+'{:03d}'.format(epoch) + '.png'
+        fname = self.filename + mgc_run_random_prefix + '_data_'+'{:03d}'.format(epoch) + '.png'
         Image.fromarray(np.uint8(data_canvas*255)).convert('RGB').save(fname)
-        fname = self.filename + my_gan_control_run_random_prefix + '_noise_'+'{:03d}'.format(epoch) + '.png'
+        fname = self.filename + mgc_run_random_prefix + '_noise_'+'{:03d}'.format(epoch) + '.png'
         Image.fromarray(np.uint8(noise_canvas*255)).convert('RGB').save(fname)
         #better: image = (image * 255).round().astype(np.uint8)?
 
@@ -182,13 +182,13 @@ class myGANCostCallback(Callback):
             callback_data['gan/cost_dis_SUMEcal'][mbstart + minibatch] = model.cost_dis_SUMEcal[0]
             callback_data['gan/cost_gen'][mbstart + minibatch] = model.cost_gen[0]
 
-        if (model.current_batch + my_gan_control_data_saving_freq) % my_gan_control_data_saving_freq == 0:
+        if (model.current_batch + mgc_data_saving_freq) % mgc_data_saving_freq == 0:
             fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), my_gan_results_dir)
-            plfname = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[
-                0] + "-" + my_gan_control_timestamp + "-" + "-" + \
+            plfname = mgc_run_random_prefix + os.path.splitext(os.path.basename(__file__))[
+                0] + "-" + mgc_timestamp + "-" + "-" + \
                       'Epoch {}'.format(model.epoch_index) + '_[' + 'batch_n_{}'.format(model.current_batch) + ']_GAN_COST_FUNCTIONS'
-            plfname_1 = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[
-                0] + "-" + my_gan_control_timestamp + "-" + "-" + \
+            plfname_1 = mgc_run_random_prefix + os.path.splitext(os.path.basename(__file__))[
+                0] + "-" + mgc_timestamp + "-" + "-" + \
                       'Epoch {}'.format(model.epoch_index) + '_[' + 'batch_n_{}'.format(model.current_batch) + ']_GAN_AUX_FUNCTIONS'
             plt_filename = os.path.join(fdir, plfname)
             plt_filename_1 = os.path.join(fdir, plfname_1)

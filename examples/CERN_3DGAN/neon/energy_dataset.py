@@ -4,14 +4,11 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from neon.data import NervanaDataIterator
-
 import os
 import h5py
 import logging
 import numpy as np
 from neon.data import HDF5Iterator
-
-
 from neon.data import ArrayIterator
 logger = logging.getLogger(__name__)
 
@@ -25,7 +22,7 @@ def temp_3Ddata(fileName):
    mykeys = f.keys()
    xtr = np.array(data) # N x X x Y x Z
 
-   if my_gan_control_debug:
+   if mgc_debug:
        xtr = xtr[:10000,:,:,:] #just to speed up debugging
 
    print ("xtr shape is {}".format(xtr.shape))
@@ -34,7 +31,7 @@ def temp_3Ddata(fileName):
 
    #plotting
    plt.figure()
-   if my_gan_control_plot_matrix:
+   if mgc_plot_matrix:
        plt.imshow(xtr[0, 0, :, :, 12])
    else:
        plt.plot(xtr[0, 0, :, :, 12])
@@ -43,7 +40,7 @@ def temp_3Ddata(fileName):
 
    #plt.imshow(xtr[1, 0, :, 12, :])
    plt.figure()
-   if my_gan_control_plot_matrix:
+   if mgc_plot_matrix:
        plt.imshow(xtr[0, 0, :, 12, :])
    else:
        plt.plot(xtr[0, 0, :, 12, :])
@@ -51,27 +48,23 @@ def temp_3Ddata(fileName):
    plt.close()
 
    plt.figure()
-   if my_gan_control_plot_matrix:
+   if mgc_plot_matrix:
        plt.imshow(xtr[0, 0, 12, :, :])
    else:
        plt.plot(xtr[0, 0, 12, :, :])
    plt.savefig('results/test_yz')
    plt.close()
 
-
-   # N x W*H*D
+   # N x W x H x D
    aa = np.reshape(xtr, (xtr.shape[0], 25*25*25))
    sumE = np.sum(aa, axis=(1))
    Epart = np.array(dtag)
 
-   if my_gan_control_debug:
-       Epart = Epart[:10000,:] #just to speed up debugging
+   if mgc_debug:
+       Epart = Epart[:10000,:]  # to speed up debugging
 
    labels = np.stack((Epart[:, 1]/100, sumE), axis=1)
    return aa.astype(np.float32), labels.astype(np.float32)
-
-
-
 
 def get_output(outputFileName):
    f = h5py.File(outputFileName,"r")
@@ -87,7 +80,7 @@ class EnergyData(NervanaDataIterator):
         self.shape, self.lshape = lshape, lshape
         self.start = 0
         self.ndata = self.X.shape[0]
-        self.nfeatures =self.X.shape[1] #Nchannels*W*H*D
+        self.nfeatures =self.X.shape[1]  # Nchannels*W*H*D
         self.nyfeatures =self.Y.shape[1]
         self.nbatches = int(self.ndata/self.be.bsz)
         self.dev_X = self.be.zeros((self.nfeatures, self.be.bsz))
@@ -128,7 +121,6 @@ class EnergyData(NervanaDataIterator):
             # the first should of shape (num_features, batch_size)
             # the second should of shape (2, batch_size)
             yield (self.dev_X, self.dev_Y)
-
 
 
 
@@ -173,9 +165,7 @@ class my_gan_HDF5Iterator(ArrayIterator):
             name (string, optional): Name to assign this iterator. Defaults to None.
         """
         super(ArrayIterator, self).__init__(name=name)
-
         self.hdf_filename = hdf_filename
-
         if not os.path.isfile(hdf_filename):
             raise IOError('File not found %s' % hdf_filename)
         self.hdf_file = h5py.File(hdf_filename, mode='r', driver=None)
@@ -189,7 +179,7 @@ class my_gan_HDF5Iterator(ArrayIterator):
         self.start = 0
 
         # the input array unflattened size
-        self.lshape = (1, 25, 25, 25)# we know the lshape; original code was: tuple(self.inp.attrs['lshape'])
+        self.lshape = (1, 25, 25, 25)  # we know the lshape; original code was: tuple(self.inp.attrs['lshape'])
         self.shape = self.lshape
 
         if 'target' in self.hdf_file:
@@ -200,9 +190,9 @@ class my_gan_HDF5Iterator(ArrayIterator):
         self.allocated = False
         self.inp_max = None
         self.inp_mean = None
-        #todo: save these two into hdf5 file
-        self.dataset_max = 0.435621724068 # got from previous runs:
-        self.dataset_mean = 0.00311173243963 # tte = self.inp[:];  np.mean(tte[tte > 1e-6])
+        #todo: save these two into the hdf5 Data file
+        self.dataset_max = 0.435621724068  # got from previous runs:
+        self.dataset_mean = 0.00311173243963  # tte = self.inp[:];  np.mean(tte[tte > 1e-6])
 
     def allocate(self):
         """
@@ -329,55 +319,48 @@ class my_gan_HDF5Iterator(ArrayIterator):
         mini_batch_in = self.mini_batch_in
         if self.outbuf is not None:
             mini_batch_out = self.mini_batch_out
-        for i1 in range(self.start, self.ndata - self.be.bsz, self.be.bsz): # otherwise at the end of the epoch i got issues
+        for i1 in range(self.start, self.ndata - self.be.bsz, self.be.bsz):
+            # Todo: otherwise at the end of the epoch i get issues, but review
             i2 = min(i1 + self.be.bsz, self.ndata)
             bsz = i2 - i1
             if i2 == self.ndata:
                 self.start = self.be.bsz - bsz
 
-            # load mini batch on host
-            xdev = self.inp
-            # Here it is where we transpose from hdf5 format (our input is N x 25 x25 x25) to Neon format, 25*25*25 x N;
-            my_buf = np.array(xdev[i1:i2, :]).astype(np.float32) # converting batch to numpy
-            my_buf = np.moveaxis(my_buf, 0, -1) # moving batch axis at the end, keeping the x,y,z order (now X,Y,Z,N)
-            mini_batch_in[:, :bsz] = my_buf.reshape((np.array(self.lshape)).prod(), bsz) #reshaping into 25*25*25xN
-            # just transposing above would do N,x,y,z into z,y,x,N
-
-            if my_gan_control_feed_dummy_data == "ones":
+            if mgc_feed_dummy_data == "ones":
                 mini_batch_in[:, :bsz] = np.ones(mini_batch_in[:, :bsz].shape)
-            elif my_gan_control_feed_dummy_data == "noise":
+            elif mgc_feed_dummy_data == "noise":
                 mini_batch_in[:, :bsz] = np.random.random(mini_batch_in[:, :bsz].shape)
+            else:  # real input case
+                # load mini batch on host
+                xdev = self.inp
+                # Here we transpose from hdf5 format (our input is N x 25 x 25 x 25) to Neon format, 25x25x25 x N;
+                my_buf = np.array(xdev[i1:i2, :]).astype(np.float32)  # converting batch to numpy
+                # moving batch axis at the end, keeping the x,y,z order (now X,Y,Z,N)
+                my_buf = np.moveaxis(my_buf, 0, -1)
+                # reshaping into 25*25*25xN, just transposing would do N,x,y,z into z,y,x,N
+                mini_batch_in[:, :bsz] = my_buf.reshape((np.array(self.lshape)).prod(), bsz)
+                if self.be.bsz > bsz:
+                    mini_batch_in[:, bsz:] = xdev[:(self.be.bsz - bsz), :].T.astype(np.float32)
+                    raise (" self.be.bsz > bsz in energy_dataset")
 
-            if self.be.bsz > bsz:
-                mini_batch_in[:, bsz:] = xdev[:(self.be.bsz - bsz), :].T.astype(np.float32)
-                raise (" self.be.bsz > bsz in energy_dataset")
+                # TODO: review this preparation, should this be done on device?
+                #removing non physical values
+                mini_batch_in[mini_batch_in < 1e-6] = 0
 
-            # TODO: review this preparation, should be done on device...
-            #removing non physical values
-            mini_batch_in[mini_batch_in < 1e-6] = 0
-
-            mb_mean = np.mean(mini_batch_in)  # use self.be here?
-            mb_max = np.max(mini_batch_in)  # all values are positive
-
-            if my_gan_control_data_normalization == "for_tanh_output":
-                #for minibatch wide normalization:
-                #mini_batch_in[:] = (mini_batch_in - mb_mean)/ mb_max #rescaling into [-1,1] as it will compare with tanh output from generator Tanh
-                mini_batch_in[:] = (mini_batch_in - self.dataset_mean)/ self.dataset_max #rescaling into [-1,1] as it will compare with tanh output from generator Tanh
-            elif my_gan_control_data_normalization == "for_logistic_output":
-                mb_mean = 0.0
-                #for minibatch wide normalization:
-                #mini_batch_in[:] = mini_batch_in / mb_max #rescaling into [0,1] as it will compare with tanh output from generator Logistic
-                mini_batch_in[:] = mini_batch_in / self.dataset_max
-            else:
-                 mb_mean = mb_max = 0.0
+                if mgc_data_normalization == "for_tanh_output":
+                    # rescaling into [-1,1] as it will compare with generator Tanh
+                    mini_batch_in[:] = (mini_batch_in - self.dataset_mean)/self.dataset_max
+                elif mgc_data_normalization == "for_logistic_output":
+                    # rescaling in [0,1] as it will compare with generator Logistic
+                    mini_batch_in[:] = mini_batch_in / self.dataset_max
 
             # push input to device
-            self.gen_input(mini_batch_in, mb_max, mb_mean)#passing original mean and max for SUMEcal estimation when training on noise
+            self.gen_input(mini_batch_in, self.dataset_max, self.dataset_mean)  # passing original mean and max for SUMEcal estimation when training on noise
 
             if self.outbuf is not None:
                 mini_batch_out[:, :bsz] = self.out[i1:i2].T
 
-                #setting label values from hdf5 data file
+                # setting label values from hdf5 data file
                 # here currently mini_batch_out we should have [0,:] = +/-11 for particle identification and [1,:] = Ep
                 # we want to have Ep in [0,:], rescaled down by 100, and SumE in [1,:]
                 # this way numerically will hold the approximation: SUMEcal ~ 2 Ep,
@@ -397,8 +380,8 @@ class my_gan_HDF5Iterator(ArrayIterator):
 
             inputs = self.inpbuf
             targets = self.outbuf
-            mini_batch_max = self.dataset_max #self.inp_max
-            mini_batch_mean = self.dataset_mean #self.inp_mean
+            mini_batch_max = self.dataset_max
+            mini_batch_mean = self.dataset_mean
 
             yield (inputs, targets, mini_batch_max, mini_batch_mean)
 

@@ -34,7 +34,7 @@ import h5py
 from my_gan_layers import generator
 
 # backend generation and batch size setting
-gen_backend(backend='gpu', batch_size=my_gan_control_batch_size)
+gen_backend(backend='gpu', batch_size=mgc_batch_size)
 
 #create a model out of the generator definition
 my_generator = Model(generator())
@@ -54,14 +54,14 @@ inf_prefix = os.path.basename(generator_filename)
 #generating input Ep energies, as in fill_noise_sampledE in our GAN model
 maxE = 5
 minE = 0
-myEnergies = np.random.rand(my_gan_control_batch_size) * (maxE - minE) + minE
+myEnergies = np.random.rand(mgc_batch_size) * (maxE - minE) + minE
 
 # random noise with the same distribution used during training
-rand_noise = np.random.normal(0, 1, (my_gan_control_batch_size, my_gan_control_latent_size))
+rand_noise = np.random.normal(0, 1, (mgc_batch_size, mgc_latent_size))
 
 # input vector to the generator
-x_new = np.zeros((my_gan_control_batch_size, my_gan_control_latent_size))
-for i in range(0, my_gan_control_batch_size):
+x_new = np.zeros((mgc_batch_size, mgc_latent_size))
+for i in range(0, mgc_batch_size):
     x_new[i, :] = rand_noise[i, :] * myEnergies[i]
 
 #input iterator to pass to get_outputs
@@ -69,24 +69,24 @@ inference_set = ArrayIterator(X=x_new, make_onehot=False)
 
 #submit the noise sample to the generator and get output
 gen_out = my_generator.get_outputs(inference_set) # (batch, 15625) this invokes the model class method that has been modified for this. Find better way.
-gen_out = gen_out.reshape((my_gan_control_batch_size, 25, 25, 25))
+gen_out = gen_out.reshape((mgc_batch_size, 25, 25, 25))
 
 file_name_endings = ["_xz", "_xy", "_yz"]
-for b_ind in range(0, my_gan_control_batch_size):
+for b_ind in range(0, mgc_batch_size):
     my_views = [gen_out[b_ind, :, 12, :], gen_out[b_ind, :, :, 12], gen_out[b_ind, 12, :, :]] # 12 to cut the cube in the center where it is supposed to show more energy
     for num_pics, tens_to_pic, f_ending in zip([0, 1, 2], my_views, file_name_endings):
         plt.figure()
         plt.title("Ep submitted for inference:{0:.2f} section{1}\n".format(myEnergies[b_ind], f_ending))
         plt.imshow(tens_to_pic)
         plt.colorbar()
-        plt.savefig(my_gan_control_inference_dir + inf_prefix + '_batch_ind_{}_inference_out'.format(b_ind) + f_ending + '.png')
+        plt.savefig(mgc_inference_dir + inf_prefix + '_batch_ind_{}_inference_out'.format(b_ind) + f_ending + '.png')
         plt.close()
 
-print(gen_out.shape, 'generator output files saved to dir {} with prefix: {}'.format(my_gan_control_inference_dir, inf_prefix))
+print(gen_out.shape, 'generator output files saved to dir {} with prefix: {}'.format(mgc_inference_dir, inf_prefix))
 
-h5f = h5py.File(my_gan_control_inference_dir + 'output_data.h5', 'w')
+h5f = h5py.File(mgc_inference_dir + 'output_data.h5', 'w')
 h5f.create_dataset('dataset_1', data=gen_out)
-print(" files were saved in {}  \n".format(my_gan_control_inference_dir))
+print(" files were saved in {}  \n".format(mgc_inference_dir))
 
 # #test
 # import os

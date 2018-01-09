@@ -35,12 +35,12 @@ import logging
 def print_figure(my_tensor, filename, Ep):
     plt.figure()
     plt.title("Ep:{0:.2f}".format(Ep))
-    if my_gan_control_plot_matrix:
+    if mgc_plot_matrix:
         plt.imshow(my_tensor)
         plt.colorbar()
     else:
         plt.plot(my_tensor)
-    plt.savefig(my_gan_results_dir + my_gan_control_run_random_prefix + filename)
+    plt.savefig(my_gan_results_dir + mgc_run_random_prefix + filename)
 
 def main():
     # my code here
@@ -48,20 +48,19 @@ def main():
     main_logger.setLevel(10)
 
     # backend generation and batch size setting
-    batch_size = my_gan_control_batch_size
+    batch_size = mgc_batch_size
     gen_backend(backend='gpu', batch_size=batch_size)
 
     # total epochs of training and size of noise vector to feed the generator
-    nb_epochs = my_gan_control_nb_epochs
-    latent_size = my_gan_control_latent_size
+    nb_epochs = mgc_nb_epochs
+    latent_size = mgc_latent_size
 
-    data_filename = "/home/azanetti/CERNDATA/Ele_v1_1_2.h5" if my_gan_control_local_gdansk else "/nfs/site/home/azanetti/CERNDATA/Ele_v1_1_2.h5"
+    data_filename = "/home/azanetti/CERNDATA/Ele_v1_1_2.h5" if mgc_local_gdansk else "/nfs/site/home/azanetti/CERNDATA/Ele_v1_1_2.h5"
     # load up the data set
-    if my_gan_control_use_hdf5_iterator:
+    if mgc_use_hdf5_iterator:
         print("Using my_gan_HDF5 Loader")
         train_set = my_gan_HDF5Iterator(data_filename)
         valid_set = my_gan_HDF5Iterator(data_filename) # not provided nby the hdf5 file so for now like this...
-
     else:
         print("Using EnergyData Loader")
         AllRealImages, AllLabels = temp_3Ddata(data_filename)
@@ -93,32 +92,34 @@ def main():
     train_set.reset()
     print 'train_set OK'
 
+    #creating generator and discriminator and pull them into a GAN container
     my_gen_layers = generator()
     my_disc_layers = discriminator()
     layers = myGenerativeAdversarial(generator=my_gen_layers, discriminator=my_disc_layers)
 
-    if my_gan_control_debug:
+    #visualizing layers in use, if in debug mode
+    if mgc_debug:
         print my_disc_layers
         print my_gen_layers
-        print("Generator option is: {}".format(my_gan_control_generator_option))
+        print("Generator option is: {}".format(mgc_generator_option))
         print 'layers defined'
         print layers
 
     # setup optimizer for generator:
-    learning_rate = my_gan_control_LR_generator
-    if my_gan_control_generator_optimizer == "Adam":
+    learning_rate = mgc_LR_generator
+    if mgc_generator_optimizer == "Adam":
         my_gen_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
-    elif my_gan_control_generator_optimizer == "RMSProp":
+    elif mgc_generator_optimizer == "RMSProp":
         my_gen_optimizer = RMSProp(learning_rate=learning_rate)
     else:
         my_gen_optimizer = GradientDescentMomentum(learning_rate=learning_rate, momentum_coef=0.9, gradient_clip_value = 5)
     print("Optimizer in use for Generator is: {}".format(my_gen_optimizer.get_description()))
 
     # setup optimizer for discriminator
-    learning_rate = my_gan_control_LR_discriminator
-    if my_gan_control_discriminator_optimizer == "Adam":
+    learning_rate = mgc_LR_discriminator
+    if mgc_discriminator_optimizer == "Adam":
         my_discr_optimizer = Adam(learning_rate=learning_rate, beta_1=0.5, beta_2=0.999, epsilon=1e-8)
-    elif my_gan_control_discriminator_optimizer == "RMSProp":
+    elif mgc_discriminator_optimizer == "RMSProp":
         my_discr_optimizer = RMSProp(learning_rate=learning_rate)  # learning_rate=learning_rate)
     else:
         my_discr_optimizer = GradientDescentMomentum(learning_rate=learning_rate, momentum_coef=0.9, gradient_clip_value=5)
@@ -129,13 +130,13 @@ def main():
     optimizer = MultiOptimizer(mapping)
 
     # setup cost functions R/F, SUMEcal, Ep
-    if my_gan_control_cost_function == "Wasserstein":
+    if mgc_cost_function == "Wasserstein":
         my_func = "wasserstein"
-    elif my_gan_control_cost_function == "Modified":
+    elif mgc_cost_function == "Modified":
         my_func = "modified"
     else:
         my_func = "original"
-    if my_gan_control_relative_vs_meansquared == "MeanSquared":
+    if mgc_relative_vs_meansquared == "MeanSquared":
         cost = Multicost(costs=[GeneralizedGANCost(costfunc=GANCost(func=my_func)), #wasserstein / modified /original
                             GeneralizedCost(costfunc=MeanSquared()),
                             GeneralizedCost(costfunc=MeanSquared())])
@@ -148,19 +149,19 @@ def main():
 
     # initialize model
     noise_dim = (latent_size,)
-    gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=my_gan_control_k,
-                wgan_param_clamp=my_gan_control_param_clamp, wgan_train_sched=my_gan_control_train_schedule) #, wgan_param_clamp=0.9,wgan_train_sched=True) # try with k > 1 (=5)
+    gan = myGAN(layers=layers, noise_dim=noise_dim, dataset=train_set, k=mgc_k,
+                wgan_param_clamp=mgc_param_clamp, wgan_train_sched=mgc_train_schedule)
 
     # configure callbacks
     # callbacks = Callbacks(gan, eval_set=valid_set)
-    callbacks = Callbacks(gan, output_file= my_gan_results_dir + my_gan_control_run_random_prefix + "callbacks_out_" + my_gan_control_timestamp + '.h5')
-    callbacks.add_callback(TrainMulticostCallback()) # position in the list of callbacks can be specified here. Put 0?
+    callbacks = Callbacks(gan, output_file= my_gan_results_dir + mgc_run_random_prefix + "callbacks_out_" + mgc_timestamp + '.h5')
+    # position in the list of callbacks can be specified here. Put 0?
+    callbacks.add_callback(TrainMulticostCallback())
     fname = os.path.splitext(os.path.basename(__file__))[0] +\
             '_[' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + ']' + 'Andrea'
     im_args = dict(filename=os.path.join(my_gan_results_dir, fname), hw=25,
                num_samples=batch_size, nchan=1, sym_range=True)
     callbacks.add_callback(myGANPlotCallback(**im_args))
-
     #add my callback to print cost functions DURING training
     callbacks.add_callback(myGANCostCallback())
 
@@ -172,12 +173,13 @@ def main():
     #gan.save_params('our_gan.prm')
 
     fdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), my_gan_results_dir)
-    generator_file_name = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + my_gan_control_timestamp + '].prm'
-    discriminator_file_name = my_gan_control_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + my_gan_control_timestamp + '].prm'
+    generator_file_name = mgc_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-generator-" + mgc_timestamp + '].prm'
+    discriminator_file_name = mgc_run_random_prefix + os.path.splitext(os.path.basename(__file__))[0] + "-discriminator-" + mgc_timestamp + '].prm'
     my_generator = Model(gan.layers.generator)
     my_generator.save_params(generator_file_name)
     my_discriminator = Model(gan.layers.discriminator)
     my_discriminator.save_params(discriminator_file_name)
+
 
 if __name__ == "__main__":
     main()
